@@ -6,16 +6,13 @@ abstract class Translator {
       {required Function onFirstModelError, bool useSecond = false});
 }
 
-
-
 class TranslatorImp implements Translator {
-
-
   final List<String> _models = [
     // 'gemini-2.0-flash-thinking-exp-1219',
     // 'gemini-1.5-flash',
     // 'gemini-exp-1206',
-    'gemini-2.5-flash-lite-preview-06-17',
+    'gemini-2.5-flash-lite-preview-06-17', // good for translate
+    'gemini-2.5-pro',
     'gemini-2.5-flash',
     'gemma-3-27b-it',
     'gemini-2.0-flash',
@@ -42,7 +39,31 @@ class TranslatorImp implements Translator {
   Future<String> getResponse(String modelType, String text) async {
     final model = getModel(modelType);
 
-    final chat = model.startChat(history: []);
+    final chat = model.startChat(history: [
+      Content('user', [
+        TextPart(
+            '[`AboutDialog`]: {{site.api}}/flutter/material/AboutDialog-class.html\n[Adding Assets and Images in Flutter]: /ui/assets/assets-and-images\n[`AlertDialog`]: {{site.api}}/flutter/material/AlertDialog-class.html'),
+      ]),
+      Content('model', [
+        TextPart(
+            '[`AboutDialog`]: {{site.api}}/flutter/material/AboutDialog-class.html\n[Adicionando Assets e Imagens no Flutter]: /ui/assets/assets-and-images\n[`AlertDialog`]: {{site.api}}/flutter/material/AlertDialog-class.html'),
+      ]),
+      Content('user', [
+        TextPart('dont translate thoses links\n'),
+      ]),
+      Content('model', [
+        TextPart(
+            '[`AboutDialog`]: {{site.api}}/flutter/material/AboutDialog-class.html\n[Adding Assets and Images in Flutter]: /ui/assets/assets-and-images\n[`AlertDialog`]: {{site.api}}/flutter/material/AlertDialog-class.html'),
+      ]),
+      Content('user', [
+        TextPart(
+            'em arquivo grandes viram assim, evite.\n\noutput from large contet:\n[25648](https://github.com/flutter/engine/pull/25548) [macos] Libera o buffer de pixel copiado após a criação da textura (cla: sim, aguardando tree verde, platform-macos, embedder, cp: 2.2)\n\n[25649](https://github.### aguardando a árvore ficar verde - 1309 pull requests'),
+      ]),
+      Content('model', [
+        TextPart(
+            'evite assim:\n(https://github.com/flutter/engine/pull/25548) [macos] Libera o buffer de pixel copiado após a criação da textura (cla: sim, aguardando tree verde, platform-macos, embedder, cp: 2.2)\n\n(https://github.com/flutter/engine/pull/25548) [macos] Libera o buffer de pixel copiado após a criação da textura (cla: sim, aguardando tree verde, platform-macos, embedder, cp: 2.2)'),
+      ]),
+    ]);
 
     final content = Content.text(text);
 
