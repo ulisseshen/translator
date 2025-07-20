@@ -38,8 +38,12 @@ abstract class FileProcessor {
     IFileWrapper file,
     bool processLargeFiles,
     Translator translator,
-    bool useSecond,
-  );
+    bool useSecond, {
+    int? currentFileIndex,
+    int? totalFiles,
+    Function()? onComplete,
+    Function()? onFailed,
+  });
   Future<int> translateFiles(
     List<IFileWrapper> filesToTranslate,
     bool processLargeFiles, {

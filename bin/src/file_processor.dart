@@ -27,8 +27,12 @@ class FileProcessorImpl implements FileProcessor {
     IFileWrapper file,
     bool processLargeFiles,
     Translator translator,
-    bool useSecond,
-  ) async {
+    bool useSecond, {
+    int? currentFileIndex,
+    int? totalFiles,
+    Function()? onComplete,
+    Function()? onFailed,
+  }) async {
     final fileSizeKB = (await file.length()) / 1024;
 
     //TODO mover para outro método
@@ -107,10 +111,23 @@ class FileProcessorImpl implements FileProcessor {
       }
 
       await file.writeAsString(updatedContent);
-      print(
-          '✅🚀 File translated successfully: ${Utils.getFileName(file)}, em ${stopwatchFile.elapsedMilliseconds}ms 🔥🔥');
+      // Execute callback after successful completion or print directly
+      if (onComplete != null) {
+        onComplete();
+      } else {
+        String progressText = '';
+        if (currentFileIndex != null && totalFiles != null) {
+          progressText = ' (${currentFileIndex + 1}/$totalFiles)';
+        }
+        print(
+            '✅🚀 File translated successfully$progressText: ${Utils.getFileName(file)}, em ${stopwatchFile.elapsedMilliseconds}ms 🔥🔥');
+      }
     } catch (e) {
       print('❌❌ Error translating file ${Utils.getFileName(file)}: ❌❌ $e');
+      // Execute failure callback
+      if (onFailed != null) {
+        onFailed();
+      }
     } finally {
       stopwatchFile.stop();
     }
@@ -123,6 +140,8 @@ class FileProcessorImpl implements FileProcessor {
     bool useSecond = false,
   }) async {
     int fileCount = 0;
+    int completedCount = 0; // Contador compartilhado para ordem incremental
+    int failedCount = 0; // Contador de arquivos falhados
     const batchSize = 10;
 
     for (var i = 0; i < filesToTranslate.length; i += batchSize) {
@@ -130,10 +149,11 @@ class FileProcessorImpl implements FileProcessor {
       final stopwatchBatch = Stopwatch()..start();
 
       try {
-        // Processar arquivos em paralelo
+        // Processar arquivos em paralelo com delay apenas para batches completos
         await Future.wait([
-          Future.delayed(Duration(minutes: batch.length == 10 ? 1 : 0)),
+          if (batch.length == 10) Future.delayed(Duration(minutes: 1)),
           ...batch.map((file) async {
+            final stopwatchFile = Stopwatch()..start();
             await FileProcessorImpl(
               translator,
               MarkdownProcessorImpl(),
@@ -142,6 +162,17 @@ class FileProcessorImpl implements FileProcessor {
               processLargeFiles,
               translator,
               useSecond,
+              totalFiles: filesToTranslate.length,
+              onComplete: () {
+                final currentIndex = ++completedCount;
+                print('✅🚀 File translated successfully ($currentIndex/${filesToTranslate.length}): ${Utils.getFileName(file)}, em ${stopwatchFile.elapsedMilliseconds}ms 🔥🔥');
+                stopwatchFile.stop();
+              },
+              onFailed: () {
+                final currentFailedIndex = ++failedCount;
+                print('❌ File translation failed ($currentFailedIndex failed of ${filesToTranslate.length}): ${Utils.getFileName(file)}, em ${stopwatchFile.elapsedMilliseconds}ms');
+                stopwatchFile.stop();
+              },
             );
             fileCount++;
           })

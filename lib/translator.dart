@@ -12,10 +12,12 @@ class TranslatorImp implements Translator {
 
 
   final List<String> _models = [
+    // 'gemini-2.0-flash-thinking-exp-1219',
+    // 'gemini-1.5-flash',
+    // 'gemini-exp-1206',
+    'gemini-2.5-flash-lite-preview-06-17',
     'gemini-2.5-flash',
-    'gemini-2.0-flash-thinking-exp-1219',
-    'gemini-1.5-flash',
-    'gemini-exp-1206',
+    'gemma-3-27b-it',
     'gemini-2.0-flash',
   ];
 
@@ -29,10 +31,11 @@ class TranslatorImp implements Translator {
       return await getResponse(_models.first, text);
     } catch (e) {
       if (useSecond) rethrow;
-      print('🍀 Erro com ${_models.first}, tentando com ${_models.last} 🚫');
+      print('🍀 Erro com ${_models.first}, tentando novamente em 40s🚫');
       print('🚫🚫 $e 🚫🚫');
       onFirstModelError();
-      return await getResponse(_models.last, text);
+      await Future.delayed(const Duration(seconds: 40));
+      return await getResponse(_models.first, text);
     }
   }
 
