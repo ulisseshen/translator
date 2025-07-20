@@ -13,6 +13,8 @@ class AppArguments {
   final String? filePath;
   final bool? multiFiles;
   final List<String>? multipleFilePaths;
+  final int maxConcurrentChunks;
+  final int chunkMaxBytes;
 
   AppArguments._({
     required this.showHelp,
@@ -28,7 +30,9 @@ class AppArguments {
     required this.extension,
     this.multiFiles,
     this.filePath,
-    this.multipleFilePaths
+    this.multipleFilePaths,
+    this.maxConcurrentChunks = 10,
+    this.chunkMaxBytes = 20480,
   });
 
   factory AppArguments.parse(List<String> arguments) {
@@ -86,6 +90,19 @@ class AppArguments {
     final directoryPath =
         arguments.firstWhere((arg) => !arg.startsWith('-'), orElse: () => '');
 
+    // Parse parallel processing parameters
+    int maxConcurrentChunks = 10; // Default
+    final concurrentIndex = arguments.indexOf('--concurrent');
+    if (concurrentIndex != -1 && concurrentIndex + 1 < arguments.length) {
+      maxConcurrentChunks = int.tryParse(arguments[concurrentIndex + 1]) ?? 10;
+    }
+
+    int chunkMaxBytes = 20480; // Default 20KB
+    final chunkSizeIndex = arguments.indexOf('--chunk-size');
+    if (chunkSizeIndex != -1 && chunkSizeIndex + 1 < arguments.length) {
+      chunkMaxBytes = int.tryParse(arguments[chunkSizeIndex + 1]) ?? 20480;
+    }
+
     return AppArguments._(
       showHelp: false,
       translateGreater: translateGreater,
@@ -100,19 +117,23 @@ class AppArguments {
       extension: extension,
       filePath: filePath,
       multiFiles: multiFiles,
-      multipleFilePaths: multiPaths
+      multipleFilePaths: multiPaths,
+      maxConcurrentChunks: maxConcurrentChunks,
+      chunkMaxBytes: chunkMaxBytes,
     );
   }
 
   void printHelp() {
     print('Usage: app [options] <directory>');
     print('Options:');
-    print('-h, --help          Show this help message');
-    print('-g                  Translate greater files');
-    print('-s                  Use second translation');
-    print('-f                  Translate a single file');
-    print('-cl                 Collect links');
-    print('--info              Show directory info');
+    print('-h, --help            Show this help message');
+    print('-g                    Translate greater files');
+    print('-s                    Use second translation');
+    print('-f                    Translate a single file');
+    print('-cl                   Collect links');
+    print('--info                Show directory info');
+    print('--concurrent <n>      Max concurrent chunk translations (default: 10)');
+    print('--chunk-size <bytes>  Max chunk size in bytes (default: 20480)');
     print('-c                  Clean Markdown files');
     print('-l                  Replace links');
     print('-v2                 Use the second version of the tool');
