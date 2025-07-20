@@ -12,10 +12,11 @@ class TranslatorImp implements Translator {
 
 
   final List<String> _models = [
+    'gemini-2.5-flash',
     'gemini-2.0-flash-thinking-exp-1219',
-    'gemini-2.0-flash-exp',
     'gemini-1.5-flash',
-    'gemini-exp-1206'
+    'gemini-exp-1206',
+    'gemini-2.0-flash',
   ];
 
   /// Função de tradução que aceita texto e retorna o texto traduzido
@@ -25,10 +26,10 @@ class TranslatorImp implements Translator {
     ensureAPIKeyExists();
 
     try {
-      return await getResponse(useSecond ? _models.last : _models[1], text);
+      return await getResponse(_models.first, text);
     } catch (e) {
       if (useSecond) rethrow;
-      print('🍀 Erro com ${_models[1]}, tentando com ${_models.last} 🚫');
+      print('🍀 Erro com ${_models.first}, tentando com ${_models.last} 🚫');
       print('🚫🚫 $e 🚫🚫');
       onFirstModelError();
       return await getResponse(_models.last, text);
@@ -70,6 +71,8 @@ Observe a quatidade de quebras de linhas para manter igual o original. Isso impl
 Mantenha o contexto técnico preciso e a formatação original, evitando traduções literais que soem estranhas ou pouco naturais no português brasileiro, priorizando a fluidez e clareza.  Traduza termos técnicos apenas se houver equivalentes amplamente reconhecidos no Brasil, e forneça a primeira tradução entre parênteses para guiar o leitor. Omita termos como 'underlying' e semelhantes que são específicos do inglês e que podem ser omitidos em português sem alterar o sentido original.
 
 Links devem ser mantidos funcionais e ancorados corretamente. Não traduza as referências dos links que ficam no rodapé ou logo após a seção adjacente.
+
+Traduza os cabeçalhos e títulos para o português, mantendo a estrutura original do documento. Certifique-se de que os títulos sejam claros e representem adequadamente o conteúdo subsequente.
 
 Preste atenção a expressões idiomáticas que não possuem tradução direta; adapte o significado para se alinhar ao contexto brasileiro. Exemplos, como trechos de código e formatações de console, devem permanecer idênticos para evitar confusões no uso técnico. No caso de instruções, como comandos no terminal, mantenha o texto em inglês para não interferir no funcionamento, mas explique em português quando necessário.
 '''),

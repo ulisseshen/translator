@@ -16,11 +16,13 @@ abstract class GeminiModel {
   Future<String> getResponse(String text);
 }
 
+const String _geminiModel = 'gemini-2.5-flash';
+
 class TranslateModel extends GeminiModel {
   TranslateModel(String apiKey)
       : super(
           apiKey: apiKey,
-          model: 'gemini-2.0-flash-exp', // Modelo específico para tradução
+          model: _geminiModel, // Modelo específico para tradução
           systemInstruction:
               '''Traduza o seguinte texto técnico sobre desenvolvimento de aplicativos Flutter do inglês para o português brasileiro, mantendo a formatação, as quebras de linha originais e os recuos do documento. Identifique-os e trate cada tipo de formatação como cada um exige (HTML, YAML, Markdown, etc). Preserve a terminologia técnica no idioma original sempre que necessário para garantir clareza e precisão, especialmente termos como 'widget', 'bundle', 'asset', 'design patterns', 'SUT', 'flag' e outros termos técnicos específicos. Não traduza esses termos para o inglês. Certifique-se de que o texto traduzido seja fluido, claro e adequado para desenvolvedores brasileiros. Caso o texto contenha links ou referências ancoradas, traduza os textos de exibição (anchors) para o português somente quando necessário para manter a coerência do conteúdo, mas mantenha as URLs intactas no formato original. Não altere a estrutura ou os elementos específicos do documento, como cabeçalhos, listas e imagens.
 
@@ -66,7 +68,7 @@ class LinkModel extends GeminiModel {
   LinkModel(String apiKey)
       : super(
           apiKey: apiKey,
-          model: 'gemini-2.0-flash-exp', // Modelo específico para links
+          model: _geminiModel, // Modelo específico para links
           systemInstruction: '''
 Cruzar as referências e links fornecidos para identificar correspondências entre textos em português e inglês. 
 Retorne os resultados preenchendo os textos equivalentes encontrados no formato `[Texto em Português][Texto em Inglês]`. Para encontrar a referência traduza os textos em portugues ao fazer as comparações. Caso não encontre uma correspondência, ignore a referência.
