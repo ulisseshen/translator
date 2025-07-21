@@ -7,6 +7,32 @@ abstract class IFileOperationTracker {
   void onFileWrite(String path, String content);
 }
 
+/// Mock translator for general testing
+class MockTranslator implements Translator {
+  int translateCallCount = 0;
+  String? lastTranslatedText;
+  String Function(String)? responseProvider;
+  
+  MockTranslator({this.responseProvider});
+  
+  @override
+  Future<String> translate(String text, {
+    required Function onFirstModelError, 
+    bool useSecond = false
+  }) async {
+    translateCallCount++;
+    lastTranslatedText = text;
+    
+    if (responseProvider != null) {
+      return responseProvider!(text);
+    }
+    
+    // Default: return the same text to preserve structure for testing
+    // In real translation, the structure should be preserved by the AI model
+    return text;
+  }
+}
+
 /// Mock translator that returns content with broken markdown structure
 class MockBrokenStructureTranslator implements Translator {
   final String brokenResponse;
