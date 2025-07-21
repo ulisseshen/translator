@@ -55,7 +55,11 @@ class ParallelChunkProcessor {
     required this.translator,
     required this.maxConcurrent,
     this.maxBytes = 20480,
-  });
+  }) {
+    if (maxConcurrent <= 0) {
+      throw ArgumentError('maxConcurrent must be greater than 0, got: $maxConcurrent');
+    }
+  }
 
   Future<Map<String, ProcessingResult>> processFiles(List<File> files) async {
     await _prepareFiles(files);

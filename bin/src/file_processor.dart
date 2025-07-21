@@ -7,7 +7,6 @@ import 'package:translator/parallel_chunk_processor.dart';
 
 import 'app.dart';
 import 'large_file_config.dart';
-import 'markdown_validator.dart';
 
 class EnhancedParallelChunkProcessor {
   final Translator translator;
@@ -178,36 +177,6 @@ class FileProcessorImpl implements FileProcessor {
     final stopwatchFile = Stopwatch()..start();
     try {
       final content = await file.readAsString();
-      
-      // Validate markdown structure for .md files
-      if (file.path.endsWith('.md')) {
-        final validationResult = MarkdownValidator.validateMarkdown(content, file.path);
-        
-        if (!validationResult.isValid) {
-          print('🚫 Markdown validation failed for ${Utils.getFileName(file)}:');
-          for (final issue in validationResult.issues) {
-            print('   ❌ $issue');
-          }
-          print('   Skipping translation due to critical markdown issues.');
-          if (onFailed != null) {
-            onFailed();
-          }
-          return;
-        }
-        
-        if (validationResult.warnings.isNotEmpty) {
-          print('⚠️ Markdown warnings for ${Utils.getFileName(file)}:');
-          for (final warning in validationResult.warnings) {
-            print('   ⚠️ $warning');
-          }
-          print('   Proceeding with translation despite warnings.');
-        }
-        
-        if (!validationResult.hasProblems) {
-          print('✅ Markdown validation passed for ${Utils.getFileName(file)}');
-        }
-      }
-      
       String translatedContent;
 
       if (processLargeFiles && fileSizeKB > LargeFileConfig.maxKbSize) {
@@ -276,8 +245,8 @@ class FileProcessorImpl implements FileProcessor {
         
         // Print detailed information
         if (!structureValid) {
-          print('   Original structure: ${MarkdownStructureValidator.extractStructure(content).length} elements');
-          print('   Translated structure: ${MarkdownStructureValidator.extractStructure(translatedContent).length} elements');
+          print('   Original structure: ${MarkdownStructureValidator.countHeaders(content)} elements');
+          print('   Translated structure: ${MarkdownStructureValidator.countHeaders(translatedContent)} elements');
         }
         
         if (!linksValid) {

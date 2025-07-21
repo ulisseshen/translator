@@ -92,10 +92,10 @@ Normal content continues.
     });
 
     group('Invalid Markdown Files', () {
-      test('should skip translation for markdown with critical issues', () async {
+      test('should process markdown files without validation (validation removed)', () async {
         const invalidMarkdown = '''# Test Document
 
-This document has critical issues.
+This document has syntax issues but will still be processed.
 
 ```javascript
 function test() {
@@ -121,15 +121,15 @@ function test() {
             onFailed: () => onFailedCalled = true,
           );
 
-          expect(onCompleteCalled, isFalse, reason: 'onComplete should not be called for invalid markdown');
-          expect(onFailedCalled, isTrue, reason: 'onFailed should be called for invalid markdown');
-          expect(mockTranslator.translateCallCount, equals(0), reason: 'translate should not be called for invalid markdown');
+          expect(onCompleteCalled, isTrue, reason: 'onComplete should be called (validation removed)');
+          expect(onFailedCalled, isFalse, reason: 'onFailed should not be called (validation removed)');
+          expect(mockTranslator.translateCallCount, equals(1), reason: 'translate should be called (validation removed)');
         } finally {
           await tempFile.delete();
         }
       });
 
-      test('should skip translation for empty markdown file', () async {
+      test('should process empty markdown file (validation removed)', () async {
         const emptyMarkdown = '';
 
         final tempFile = await _createTempFile('empty_test.md', emptyMarkdown);
@@ -146,15 +146,15 @@ function test() {
             onFailed: () => onFailedCalled = true,
           );
 
-          expect(onCompleteCalled, isFalse, reason: 'Should not complete for empty file');
-          expect(onFailedCalled, isTrue, reason: 'Should fail for empty file');
-          expect(mockTranslator.translateCallCount, equals(0), reason: 'Should not translate empty file');
+          expect(onCompleteCalled, isTrue, reason: 'Should complete for empty file (validation removed)');
+          expect(onFailedCalled, isFalse, reason: 'Should not fail for empty file (validation removed)');
+          expect(mockTranslator.translateCallCount, equals(1), reason: 'Should translate empty file (validation removed)');
         } finally {
           await tempFile.delete();
         }
       });
 
-      test('should skip translation for markdown with broken reference-style links', () async {
+      test('should be blocked by structure validation (not markdown validation)', () async {
         const invalidReferenceLinks = '''# Test Document
 
 This document has broken reference-style links.
@@ -188,9 +188,10 @@ Normal content continues.
             onFailed: () => onFailedCalled = true,
           );
 
-          expect(onCompleteCalled, isFalse, reason: 'Should not complete for broken reference links');
-          expect(onFailedCalled, isTrue, reason: 'Should fail for broken reference links');
-          expect(mockTranslator.translateCallCount, equals(0), reason: 'Should not translate with broken references');
+          // This file is blocked by structure validation (not markdown validation)
+          // The broken reference links cause structure mismatch after translation
+          expect(onFailedCalled, isTrue, reason: 'Should fail due to structure validation blocking broken references');
+          expect(mockTranslator.translateCallCount, equals(1), reason: 'Should translate but fail structure validation');
         } finally {
           await tempFile.delete();
         }
@@ -293,31 +294,7 @@ But it's not a .md file so it should be processed.
         }
       });
 
-      test('should skip large invalid markdown files', () async {
-        // Create a large but invalid markdown file
-        final invalidLargeContent = _generateLargeInvalidMarkdown();
-
-        final tempFile = await _createTempFile('large_invalid_test.md', invalidLargeContent);
-        bool onCompleteCalled = false;
-        bool onFailedCalled = false;
-
-        try {
-          await fileProcessor.translateOne(
-            FileWrapper(tempFile.path),
-            true, // processLargeFiles = true
-            mockTranslator,
-            false,
-            onComplete: () => onCompleteCalled = true,
-            onFailed: () => onFailedCalled = true,
-          );
-
-          expect(onCompleteCalled, isFalse, reason: 'Should not complete for invalid large markdown');
-          expect(onFailedCalled, isTrue, reason: 'Should fail for invalid large markdown');
-          expect(mockTranslator.translateCallCount, equals(0), reason: 'Should not translate invalid large file');
-        } finally {
-          await tempFile.delete();
-        }
-      });
+     
     });
   });
 }

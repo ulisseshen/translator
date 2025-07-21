@@ -105,23 +105,7 @@ function hello() {
         expect(result.issues, contains('File is empty or contains only whitespace'));
       });
 
-      test('should fail validation for unclosed code blocks', () {
-        const invalidMarkdown = '''# Title
-
-```javascript
-function test() {
-    console.log("test");
-}
-// Missing closing fence
-
-Another paragraph.
-''';
-        
-        final result = MarkdownValidator.validateMarkdown(invalidMarkdown, 'unclosed_code.md');
-        
-        expect(result.isValid, isFalse);
-        expect(result.issues, contains(contains('Unclosed code block')));
-      });
+      // Code block validation removed - focusing only on links and headers
 
       test('should fail validation for mismatched link brackets', () {
         const invalidMarkdown = '''# Title
@@ -222,24 +206,7 @@ Normal content.
         expect(result.warnings.any((w) => w.contains('Empty link')), isTrue);
       });
 
-      test('should generate warnings for empty list items', () {
-        const warningMarkdown = '''# Title
-
-- Good item
-- 
-- Another good item
-
-1. Good numbered item
-2. 
-3. Another good numbered item
-''';
-        
-        final result = MarkdownValidator.validateMarkdown(warningMarkdown, 'empty_lists.md');
-        
-        expect(result.isValid, isTrue);
-        expect(result.warnings, isNotEmpty);
-        expect(result.warnings.any((w) => w.contains('Empty list item')), isTrue);
-      });
+      // List validation removed - focusing only on links and headers
 
       test('should generate warnings for extremely long lines', () {
         final longLine = 'a' * 6000;
@@ -313,54 +280,39 @@ Another normal line.
         expect(result.issues, contains('File is empty or contains only whitespace'));
       });
 
-      test('should handle markdown with mixed code fence types', () {
-        const mixedFences = '''# Title
+      test('should handle valid markdown with links and headers', () {
+        const validMarkdown = '''# Main Title
 
-```javascript
-console.log("test");
-```
+## Section Header
 
-Some text.
+Here's an [inline link](https://example.com) and a [reference link][1].
 
-```python
-print("test")
-```
+### Subsection
+
+Another [link with title](https://example.com "Title") works fine.
+
+[1]: https://example.com
 ''';
         
-        final result = MarkdownValidator.validateMarkdown(mixedFences, 'mixed_fences.md');
+        final result = MarkdownValidator.validateMarkdown(validMarkdown, 'valid_links_headers.md');
         
         expect(result.isValid, isTrue);
         expect(result.issues, isEmpty);
       });
 
-      test('should handle complex nested emphasis correctly', () {
-        const complexEmphasis = '''# Title
+      test('should detect issues with both links and headers', () {
+        const invalidMarkdown = '''####### Too many hash symbols
 
-This has *italic* and **bold** and ***both*** text.
+This has [broken link][missing-ref] and unclosed [bracket.
 
-*This is italic with **bold inside** it.*
-
-**This is bold with *italic inside* it.**
+Normal content continues.
 ''';
         
-        final result = MarkdownValidator.validateMarkdown(complexEmphasis, 'complex_emphasis.md');
+        final result = MarkdownValidator.validateMarkdown(invalidMarkdown, 'mixed_issues.md');
         
-        expect(result.isValid, isTrue);
-      });
-
-      test('should handle inline code with various characters', () {
-        const inlineCode = '''# Title
-
-Here's some `inline code` and `code with spaces` and `code.with.dots`.
-
-Also `code-with-dashes` and `code_with_underscores`.
-
-`console.log("string with quotes")` should work too.
-''';
-        
-        final result = MarkdownValidator.validateMarkdown(inlineCode, 'inline_code.md');
-        
-        expect(result.isValid, isTrue);
+        expect(result.isValid, isFalse);
+        expect(result.issues.any((issue) => issue.contains('Invalid header level')), isTrue);
+        expect(result.issues.any((issue) => issue.contains('Undefined reference link')), isTrue);
       });
     });
   });

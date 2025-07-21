@@ -1,27 +1,19 @@
 /// Utility class for validating markdown files before translation
 class MarkdownValidator {
   /// Validation result containing status and details
+  /// Focuses only on links and headers as requested
   static MarkdownValidationResult validateMarkdown(String content, String filePath) {
     final issues = <String>[];
     final warnings = <String>[];
     
-    // Check for basic markdown structure
+    // Check for basic markdown structure (empty files, etc.)
     _validateBasicStructure(content, issues, warnings);
     
-    // Check for malformed links
+    // Check for malformed links (both inline and reference-style)
     _validateLinks(content, issues, warnings);
     
     // Check for malformed headers
     _validateHeaders(content, issues, warnings);
-    
-    // Check for malformed code blocks
-    _validateCodeBlocks(content, issues, warnings);
-    
-    // Check for malformed lists
-    _validateLists(content, issues, warnings);
-    
-    // Check for unclosed emphasis/bold markers
-    _validateEmphasis(content, issues, warnings);
     
     return MarkdownValidationResult(
       isValid: issues.isEmpty,
@@ -126,77 +118,6 @@ class MarkdownValidator {
       if (RegExp(r'^#{7,}').hasMatch(line)) {
         issues.add('Line ${i + 1}: Invalid header level (more than 6 #): "$line"');
       }
-    }
-  }
-  
-  static void _validateCodeBlocks(String content, List<String> issues, List<String> warnings) {
-    // Check for unclosed code fences - more comprehensive approach
-    final lines = content.split('\n');
-    bool inCodeBlock = false;
-    int openFences = 0;
-    int closeFences = 0;
-    
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i].trimLeft();
-      if (line.startsWith('```')) {
-        if (!inCodeBlock) {
-          inCodeBlock = true;
-          openFences++;
-        } else {
-          inCodeBlock = false;
-          closeFences++;
-        }
-      }
-    }
-    
-    if (openFences != closeFences || inCodeBlock) {
-      issues.add('Unclosed code block - $openFences opening fences, $closeFences closing fences');
-    }
-    
-    // Check for inline code with unclosed backticks
-    final inlineCodeMatches = RegExp(r'`[^`\n]*`').allMatches(content);
-    final allBackticks = RegExp(r'`').allMatches(content).length;
-    final usedInInlineCode = inlineCodeMatches.length * 2;
-    final usedInCodeBlocks = (openFences + closeFences) * 3;
-    final unpairedBackticks = allBackticks - usedInInlineCode - usedInCodeBlocks;
-    
-    if (unpairedBackticks > 0) {
-      warnings.add('Possible unclosed inline code - $unpairedBackticks unpaired backticks found');
-    }
-  }
-  
-  static void _validateLists(String content, List<String> issues, List<String> warnings) {
-    final lines = content.split('\n');
-    
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
-      
-      // Check for list items that might be malformed
-      if (RegExp(r'^[-*+]\s*$').hasMatch(line)) {
-        warnings.add('Line ${i + 1}: Empty list item found');
-      }
-      
-      // Check for numbered lists with inconsistent formatting
-      if (RegExp(r'^\d+\.\s*$').hasMatch(line)) {
-        warnings.add('Line ${i + 1}: Empty numbered list item found');
-      }
-    }
-  }
-  
-  static void _validateEmphasis(String content, List<String> issues, List<String> warnings) {
-    // Check for unclosed emphasis markers
-    final boldPattern = RegExp(r'\*\*[^*]*\*\*');
-    final italicPattern = RegExp(r'\*[^*]*\*');
-    
-    final allAsterisks = RegExp(r'\*').allMatches(content).length;
-    final boldMatches = boldPattern.allMatches(content).length;
-    final italicMatches = italicPattern.allMatches(content).length;
-    
-    // This is a simplified check - exact validation would be more complex
-    final expectedAsterisks = (boldMatches * 4) + (italicMatches * 2);
-    
-    if (allAsterisks > expectedAsterisks) {
-      warnings.add('Possible unclosed emphasis markers - extra asterisks found');
     }
   }
 }

@@ -119,90 +119,49 @@ Sempre teste seus widgets completamente!
     });
 
     test('validates structure detection across multiple scenarios', () async {
-      final testCases = [
-        {
-          'name': 'Missing header levels',
-          'original': '''
+      // Single test case: Missing header levels
+      const original = '''
 # Main Title
 ## Subtitle
 ### Subsubtitle
 Content here
-''',
-          'broken': '''
+''';
+      const broken = '''
 Main Title
 Subtitle
 Subsubtitle
 Content here
-''',
-        },
-        {
-          'name': 'Lost list formatting',
-          'original': '''
-# Instructions
-- Step 1
-- Step 2
-- Step 3
-''',
-          'broken': '''
-# Instructions
-Step 1
-Step 2  
-Step 3
-''',
-        },
-        {
-          'name': 'Missing code blocks',
-          'original': '''
-# Code Example
-```dart
-void main() {
-  print('Hello');
-}
-```
-''',
-          'broken': '''
-# Code Example
-void main() {
-  print('Hello');
-}
-''',
-        },
-      ];
+''';
+      const name = 'Missing header levels';
 
-      for (final testCase in testCases) {
-        final original = testCase['original'] as String;
-        final broken = testCase['broken'] as String;
-        final name = testCase['name'] as String;
-        
-        // Verify this test case actually has broken structure
-        final isActuallyBroken = !MarkdownStructureValidator.validateStructureConsistency(original, broken);
-        expect(isActuallyBroken, isTrue, reason: 'Test case "$name" should have broken structure');
+      // Verify this test case actually has broken structure
+      final isActuallyBroken = !MarkdownStructureValidator.validateStructureConsistency(original, broken);
+      expect(isActuallyBroken, isTrue, reason: 'Test case "$name" should have broken structure');
 
-        // Test with FileProcessorImpl and file tracking
-        final fileTracker = TestFileOperationTracker();
-        final mockTranslator = MockBrokenStructureTranslator(broken);
-        final mockFile = MockFileWrapper('/test/$name.md', original, tracker: fileTracker);
-        final mockMarkdownProcessor = MarkdownProcessorImpl();
-        
-        final fileProcessor = FileProcessorImpl(mockTranslator, mockMarkdownProcessor);
+      // Test with FileProcessorImpl and file tracking
+      final fileTracker = TestFileOperationTracker();
+      final mockTranslator = MockBrokenStructureTranslator(broken);
+      final mockFile = MockFileWrapper('/test/$name.md', original, tracker: fileTracker);
+      final mockMarkdownProcessor = MarkdownProcessorImpl();
 
-        bool completed = false;
-        bool failed = false;
-        await fileProcessor.translateOne(
-          mockFile,
-          false,
-          mockTranslator,
-          false,
-          onComplete: () => completed = true,
-          onFailed: () => failed = true,
-        );
+      final fileProcessor = FileProcessorImpl(mockTranslator, mockMarkdownProcessor);
 
-        // Verify structure validation correctly rejects broken translations
-        expect(completed, isFalse, reason: 'Test case "$name" should not complete when structure is broken');
-        expect(failed, isTrue, reason: 'Test case "$name" should fail when structure validation detects issues');
-        expect(mockFile.writeWasCalled, isFalse, reason: 'File should not be written for "$name" when structure is broken');
-        expect(fileTracker.hasWrites, isFalse, reason: 'No file writes should occur for "$name" when structure validation fails');
-      }
+      bool completed = false;
+      bool failed = false;
+      await fileProcessor.translateOne(
+        mockFile,
+        false,
+        mockTranslator,
+        false,
+        onComplete: () => completed = true,
+        onFailed: () => failed = true,
+      );
+
+      // Verify structure validation correctly rejects broken translations
+      expect(completed, isFalse, reason: 'Test case "$name" should not complete when structure is broken');
+      expect(failed, isTrue, reason: 'Test case "$name" should fail when structure validation detects issues');
+      expect(mockFile.writeWasCalled, isFalse, reason: 'File should not be written for "$name" when structure is broken');
+      expect(fileTracker.hasWrites, isFalse, reason: 'No file writes should occur for "$name" when structure validation fails');
     });
 
     test('validates FileProcessorImpl correctly rejects broken reference links', () async {
