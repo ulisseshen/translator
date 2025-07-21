@@ -5,6 +5,7 @@ import 'src/tools.dart' as tools;
 import 'src/config.dart';
 
 import 'src/app.dart';
+import 'src/large_file_config.dart';
 
 void main(List<String> arguments) async {
   final args = AppArguments.parse(arguments);
@@ -162,7 +163,7 @@ Opções:
   -h, --help            Exibe esta mensagem de ajuda
   --info                Exibe informações sobre o diretório e o tamanho dos arquivos
   -e <extensão>         Especifica a extensão dos arquivos a serem processados (padrão: .md)
-  -g                    Processa arquivos maiores que 28KB
+  -g                    Processa arquivos maiores que ${LargeFileConfig.maxKbSize}KB
   -l                    Substitui todos os links nos arquivos Markdown
   -c                    Limpa os arquivos Markdown removendo tags específicas
 
@@ -173,7 +174,7 @@ Exemplos:
   flutter-translate /caminho/para/diretorio       # Traduz arquivos .md no diretório
   flutter-translate /caminho/para/diretorio --info # Exibe informações sobre os arquivos
   flutter-translate /caminho/para/diretorio -e .txt # Traduz arquivos .txt
-  flutter-translate /caminho/para/diretorio -g     # Traduz apenas arquivos maiores que 28KB
+  flutter-translate /caminho/para/diretorio -g     # Traduz apenas arquivos maiores que ${LargeFileConfig.maxKbSize}KB
   flutter-translate /caminho/para/diretorio -l     # Substitui links em todos os arquivos Markdown
   flutter-translate /caminho/para/diretorio -c     # Limpa arquivos Markdown
 

@@ -1,3 +1,5 @@
+import 'large_file_config.dart';
+
 class AppArguments {
   final bool showHelp;
   final bool translateGreater;
@@ -31,8 +33,8 @@ class AppArguments {
     this.multiFiles,
     this.filePath,
     this.multipleFilePaths,
-    this.maxConcurrentChunks = 10,
-    this.chunkMaxBytes = 20480,
+    this.maxConcurrentChunks = LargeFileConfig.defaultMaxConcurrentChunks,
+    this.chunkMaxBytes = LargeFileConfig.defaultChunkMaxBytes,
   });
 
   factory AppArguments.parse(List<String> arguments) {
@@ -91,16 +93,16 @@ class AppArguments {
         arguments.firstWhere((arg) => !arg.startsWith('-'), orElse: () => '');
 
     // Parse parallel processing parameters
-    int maxConcurrentChunks = 10; // Default
+    int maxConcurrentChunks = LargeFileConfig.defaultMaxConcurrentChunks;
     final concurrentIndex = arguments.indexOf('--concurrent');
     if (concurrentIndex != -1 && concurrentIndex + 1 < arguments.length) {
-      maxConcurrentChunks = int.tryParse(arguments[concurrentIndex + 1]) ?? 10;
+      maxConcurrentChunks = int.tryParse(arguments[concurrentIndex + 1]) ?? LargeFileConfig.defaultMaxConcurrentChunks;
     }
 
-    int chunkMaxBytes = 20480; // Default 20KB
+    int chunkMaxBytes = LargeFileConfig.defaultChunkMaxBytes;
     final chunkSizeIndex = arguments.indexOf('--chunk-size');
     if (chunkSizeIndex != -1 && chunkSizeIndex + 1 < arguments.length) {
-      chunkMaxBytes = int.tryParse(arguments[chunkSizeIndex + 1]) ?? 20480;
+      chunkMaxBytes = int.tryParse(arguments[chunkSizeIndex + 1]) ?? LargeFileConfig.defaultChunkMaxBytes;
     }
 
     return AppArguments._(
@@ -132,8 +134,8 @@ class AppArguments {
     print('-f                    Translate a single file');
     print('-cl                   Collect links');
     print('--info                Show directory info');
-    print('--concurrent <n>      Max concurrent chunk translations (default: 10)');
-    print('--chunk-size <bytes>  Max chunk size in bytes (default: 20480)');
+    print('--concurrent <n>      Max concurrent chunk translations (default: ${LargeFileConfig.defaultMaxConcurrentChunks})');
+    print('--chunk-size <bytes>  Max chunk size in bytes (default: ${LargeFileConfig.defaultChunkMaxBytes})');
     print('-c                  Clean Markdown files');
     print('-l                  Replace links');
     print('-v2                 Use the second version of the tool');

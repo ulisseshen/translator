@@ -5,8 +5,8 @@ import 'package:translator/markdown_spliter.dart';
 import 'package:translator/translator.dart';
 import 'package:translator/parallel_chunk_processor.dart';
 
-import 'config.dart';
 import 'app.dart';
+import 'large_file_config.dart';
 
 class EnhancedParallelChunkProcessor {
   final Translator translator;
@@ -21,7 +21,7 @@ class EnhancedParallelChunkProcessor {
     required this.translator,
     required this.maxConcurrent,
     required this.fileName,
-    this.maxBytes = 20480,
+    this.maxBytes = LargeFileConfig.defaultChunkMaxBytes,
   });
 
   Future<Map<String, ProcessingResult>> processFiles(List<File> files) async {
@@ -129,8 +129,8 @@ class FileProcessorImpl implements FileProcessor {
   FileProcessorImpl(
     this.translator, 
     this.markdownProcessor, {
-    this.maxConcurrentChunks = 10,
-    this.chunkMaxBytes = 20480, // 20KB default
+    this.maxConcurrentChunks = LargeFileConfig.defaultMaxConcurrentChunks,
+    this.chunkMaxBytes = LargeFileConfig.defaultChunkMaxBytes,
   });
 
   @override
@@ -167,9 +167,8 @@ class FileProcessorImpl implements FileProcessor {
     // }
 
     // Verifica se deve traduzir arquivos grandes
-    if (!processLargeFiles && fileSizeKB > kMaxKbSize) {
-      print(
-          'Skipping file > ${kMaxKbSize}KB. Use the -g flag to translate large files.');
+    if (LargeFileConfig.shouldSkipFile(fileSizeKB, processLargeFiles)) {
+      print(LargeFileConfig.getSkipMessage());
       return;
     }
 
@@ -180,9 +179,8 @@ class FileProcessorImpl implements FileProcessor {
       final content = await file.readAsString();
       String translatedContent;
 
-      if (processLargeFiles && fileSizeKB > kMaxKbSize) {
-        print(
-            '📜 Large file detected. 🚀 Parallel processing: ${Utils.getFileName(file)}');
+      if (processLargeFiles && fileSizeKB > LargeFileConfig.maxKbSize) {
+        print(LargeFileConfig.getLargeFileDetectedMessage(Utils.getFileName(file)));
         
         // First, split the file and show the parts
         final splitter = MarkdownSplitter(maxBytes: chunkMaxBytes);
@@ -308,7 +306,7 @@ class FileProcessorImpl implements FileProcessor {
     int fileCount = 0;
     int completedCount = 0;
     int failedCount = 0;
-    const batchSize = 5; // Reduced batch size for better parallel processing
+    const batchSize = LargeFileConfig.defaultBatchSize; // Reduced batch size for better parallel processing
 
     print('🚀 Starting parallel translation of ${filesToTranslate.length} files...');
 
