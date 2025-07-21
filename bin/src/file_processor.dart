@@ -223,6 +223,23 @@ class FileProcessorImpl implements FileProcessor {
           rethrow;
         }
       }
+      
+      // Validate markdown structure consistency before saving
+      final isStructureValid = MarkdownStructureValidator.validateStructureConsistency(
+        content, 
+        translatedContent
+      );
+      
+      if (!isStructureValid) {
+         print('🚫❗ [STRUCTURE MISMATCH] File skipped: ${Utils.getFileName(file)} ❗🚫');
+         print('   Original structure: ${MarkdownStructureValidator.extractStructure(content).length} elements');
+         print('   Translated structure: ${MarkdownStructureValidator.extractStructure(translatedContent).length} elements');
+        if (onFailed != null) {
+          onFailed();
+        }
+        return; // Skip saving the file
+      }
+      
       String cleanedContent =
           FileCleanerImpl().ensureDontHaveMarkdown(translatedContent);
 

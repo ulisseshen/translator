@@ -1,94 +1,10 @@
 import 'package:test/test.dart';
-import 'package:translator/translator.dart';
 import '../bin/src/app.dart';
-import 'markdown_structure_test.dart'; // For MarkdownStructureValidator
-
-/// Mock translator that returns content with broken markdown structure
-class MockBrokenStructureTranslator implements Translator {
-  final String brokenResponse;
-  
-  MockBrokenStructureTranslator(this.brokenResponse);
-  
-  @override
-  Future<String> translate(String text, {
-    required Function onFirstModelError, 
-    bool useSecond = false
-  }) async {
-    // Return content with intentionally broken structure
-    return brokenResponse;
-  }
-}
-
-/// Interface to track file operations for testing
-abstract class IFileOperationTracker {
-  void onFileRead(String path, String content);
-  void onFileWrite(String path, String content);
-}
-
-/// Mock file wrapper that tracks write operations
-class MockFileWrapper implements IFileWrapper {
-  final String _content;
-  String? writtenContent;
-  final String _path;
-  final int _length;
-  final IFileOperationTracker? _tracker;
-  bool _writeWasCalled = false;
-  
-  MockFileWrapper(this._path, this._content, {int? length, IFileOperationTracker? tracker}) 
-    : _length = length ?? _content.length,
-      _tracker = tracker;
-  
-  @override
-  Future<String> readAsString() async {
-    _tracker?.onFileRead(_path, _content);
-    return _content;
-  }
-  
-  @override
-  Future<void> writeAsString(String content) async {
-    _writeWasCalled = true;
-    writtenContent = content;
-    _tracker?.onFileWrite(_path, content);
-  }
-  
-  @override
-  String get path => _path;
-  
-  @override
-  Future<int> length() async => _length;
-  
-  @override
-  Future<List<String>> readAsLines() async => _content.split('\n');
-  
-  @override
-  bool exists() => true;
-  
-  /// Check if writeAsString was called (for test assertions)
-  bool get writeWasCalled => _writeWasCalled;
-}
-
-/// Test tracker to monitor file operations
-class TestFileOperationTracker implements IFileOperationTracker {
-  final List<String> readOperations = [];
-  final List<String> writeOperations = [];
-  
-  @override
-  void onFileRead(String path, String content) {
-    readOperations.add('READ: $path');
-  }
-  
-  @override
-  void onFileWrite(String path, String content) {
-    writeOperations.add('WRITE: $path');
-  }
-  
-  bool get hasWrites => writeOperations.isNotEmpty;
-  int get writeCount => writeOperations.length;
-}
+import 'test_mocks.dart';
 
 void main() {
   group('FileProcessor Structure Validation', () {
-    test('demonstrates FileProcessorImpl saves broken markdown structure as successful', () async {
+    test('validates FileProcessorImpl correctly rejects broken markdown structure', () async {
       // Original markdown with clear structure
       const originalMarkdown = '''
 # Flutter Widget Guide
@@ -146,14 +62,14 @@ Dart Guide
 Sempre teste seus widgets completamente!
 ''';
 
-      // Verify structure is actually broken
+      // Verify structure is actually broken for test setup
       final isStructureBroken = !MarkdownStructureValidator.validateStructureConsistency(
         originalMarkdown,
         brokenTranslation
       );
       
       expect(isStructureBroken, isTrue, 
-        reason: 'Test setup should have broken structure for demonstration');
+        reason: 'Test setup validation: broken structure should be detected');
 
       // Create mocks with file operation tracking
       final fileTracker = TestFileOperationTracker();
@@ -171,7 +87,7 @@ Sempre teste seus widgets completamente!
       bool translationCompleted = false;
       bool translationFailed = false;
 
-      // Call translateOne - this should complete successfully despite broken structure
+      // Call translateOne - should now fail due to structure validation
       await fileProcessor.translateOne(
         mockFile,
         false, // processLargeFiles
@@ -185,43 +101,24 @@ Sempre teste seus widgets completamente!
         },
       );
 
-      // DEMONSTRATION: FileProcessorImpl currently treats broken structure as SUCCESS
-      // This test should FAIL to demonstrate the issue
+      // Verify structure validation works correctly
       expect(translationCompleted, isFalse, 
-        reason: 'This test should FAIL - FileProcessorImpl incorrectly marks broken structure as successful');
+        reason: 'Translation should not complete when structure is broken');
       expect(translationFailed, isTrue, 
-        reason: 'This test should FAIL - FileProcessorImpl should detect broken structure and call onFailed');
+        reason: 'Translation should fail when structure validation detects issues');
       
-      // CRITICAL TEST: Verify that writeAsString was called (this is the problem!)
+      // Verify file operations are prevented when structure is broken
       expect(mockFile.writeWasCalled, isFalse, 
-        reason: 'writeAsString should NOT be called when structure is broken, but it currently is!');
+        reason: 'File should not be written when structure validation fails');
       expect(fileTracker.hasWrites, isFalse, 
         reason: 'No file writes should occur when structure validation fails');
       
-      // This assertion will fail, demonstrating the issue
+      // Verify no content was written
       expect(mockFile.writtenContent, isNull, 
-        reason: 'No content should be written when structure is broken');
-      
-      // Show the actual problem in the output
-      if (mockFile.writeWasCalled) {
-        final writtenContent = mockFile.writtenContent!;
-        
-        // Extract the actual translated content (remove metadata)
-        final contentWithoutMetadata = writtenContent
-            .replaceFirst(RegExp(r'---\nia-translate: true\n'), '')
-            .replaceFirst(RegExp(r'<!-- ia-translate: true -->\n'), '');
-        
-        print('\n=== ISSUE DEMONSTRATION ===');
-        print('❌ writeAsString WAS CALLED when structure is broken!');
-        print('❌ File writes occurred: ${fileTracker.writeCount}');
-        print('❌ Original structure elements: ${MarkdownStructureValidator.extractStructure(originalMarkdown).length}');
-        print('❌ Saved structure elements: ${MarkdownStructureValidator.extractStructure(contentWithoutMetadata).length}');
-        print('❌ Translation marked as completed: $translationCompleted');
-        print('This demonstrates the core issue: FileProcessor saves broken structure as successful!');
-      }
+        reason: 'No content should be written when structure validation fails');
     });
 
-    test('shows different scenarios where structure breaks but translation succeeds', () async {
+    test('validates structure detection across multiple scenarios', () async {
       final testCases = [
         {
           'name': 'Missing header levels',
@@ -300,15 +197,11 @@ void main() {
           onFailed: () => failed = true,
         );
 
-        // These tests should FAIL to demonstrate the issue
-        expect(completed, isFalse, reason: 'Test case "$name" should FAIL - broken structure incorrectly marked as successful');
-        expect(failed, isTrue, reason: 'Test case "$name" should call onFailed when structure is broken');
-        expect(mockFile.writeWasCalled, isFalse, reason: 'writeAsString should NOT be called for "$name" when structure is broken');
+        // Verify structure validation correctly rejects broken translations
+        expect(completed, isFalse, reason: 'Test case "$name" should not complete when structure is broken');
+        expect(failed, isTrue, reason: 'Test case "$name" should fail when structure validation detects issues');
+        expect(mockFile.writeWasCalled, isFalse, reason: 'File should not be written for "$name" when structure is broken');
         expect(fileTracker.hasWrites, isFalse, reason: 'No file writes should occur for "$name" when structure validation fails');
-        
-        if (mockFile.writeWasCalled) {
-          print('❌ Test case "$name": writeAsString was called despite broken structure!');
-        }
       }
     });
   });

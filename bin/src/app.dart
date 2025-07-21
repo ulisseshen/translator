@@ -9,3 +9,4 @@ export 'markdown_utils.dart';
 export 'utils.dart';
 export 'app_arguments.dart';
 export 'linker_processor.dart';
+export 'markdown_structure_validator.dart';
