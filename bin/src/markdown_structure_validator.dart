@@ -1,4 +1,5 @@
 import 'package:markdown/markdown.dart';
+import 'markdown_link_validator.dart';
 
 /// Domain object that validates markdown structure consistency between input and output
 /// Focuses on high-level structural elements only (headers, lists, blockquotes, code blocks)
@@ -82,6 +83,45 @@ class MarkdownStructureValidator {
     return _compareStructures(originalStructure, translatedStructure);
   }
   
+  /// Validates both structure and reference-style links consistency
+  static bool validateStructureAndLinks(String original, String translated) {
+    // First check structural consistency
+    if (!validateStructureConsistency(original, translated)) {
+      return false;
+    }
+    
+    // Then check reference-style links
+    return MarkdownLinkValidator.validateReferenceLinks(original, translated);
+  }
+  
+  /// Gets detailed validation results for both structure and links
+  static ValidationResult validateStructureAndLinksDetailed(String original, String translated) {
+    final structureValid = validateStructureConsistency(original, translated);
+    final linkValidation = MarkdownLinkValidator.validateReferenceLinksDetailed(original, translated);
+    
+    final issues = <String>[];
+    final warnings = <String>[];
+    
+    if (!structureValid) {
+      final originalStructure = extractStructure(original);
+      final translatedStructure = extractStructure(translated);
+      issues.add('Structure mismatch: ${originalStructure.length} vs ${translatedStructure.length} elements');
+    }
+    
+    if (!linkValidation.isValid) {
+      issues.addAll(linkValidation.issues);
+    }
+    
+    warnings.addAll(linkValidation.warnings);
+    
+    return ValidationResult(
+      isValid: structureValid && linkValidation.isValid,
+      issues: issues,
+      warnings: warnings,
+      linkValidation: linkValidation,
+    );
+  }
+  
   static bool _compareStructures(List<String> original, List<String> translated) {
     if (original.length != translated.length) {
       return false;
@@ -94,5 +134,34 @@ class MarkdownStructureValidator {
     }
     
     return true;
+  }
+}
+
+/// Combined validation result for structure and links
+class ValidationResult {
+  final bool isValid;
+  final List<String> issues;
+  final List<String> warnings;
+  final ReferenceLinkValidationResult linkValidation;
+  
+  const ValidationResult({
+    required this.isValid,
+    required this.issues,
+    required this.warnings,
+    required this.linkValidation,
+  });
+  
+  @override
+  String toString() {
+    final buffer = StringBuffer();
+    buffer.writeln('ValidationResult:');
+    buffer.writeln('  Valid: $isValid');
+    if (issues.isNotEmpty) {
+      buffer.writeln('  Issues: ${issues.join(', ')}');
+    }
+    if (warnings.isNotEmpty) {
+      buffer.writeln('  Warnings: ${warnings.join(', ')}');
+    }
+    return buffer.toString();
   }
 }

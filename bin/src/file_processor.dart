@@ -224,16 +224,39 @@ class FileProcessorImpl implements FileProcessor {
         }
       }
       
-      // Validate markdown structure consistency before saving
-      final isStructureValid = MarkdownStructureValidator.validateStructureConsistency(
+      // Validate markdown structure and reference links consistency before saving
+      final validationResult = MarkdownStructureValidator.validateStructureAndLinksDetailed(
         content, 
         translatedContent
       );
       
-      if (!isStructureValid) {
-         print('🚫❗ [STRUCTURE MISMATCH] File skipped: ${Utils.getFileName(file)} ❗🚫');
-         print('   Original structure: ${MarkdownStructureValidator.extractStructure(content).length} elements');
-         print('   Translated structure: ${MarkdownStructureValidator.extractStructure(translatedContent).length} elements');
+      if (!validationResult.isValid) {
+        final fileName = Utils.getFileName(file);
+        
+        // Check if it's a structure issue or link issue
+        final structureValid = MarkdownStructureValidator.validateStructureConsistency(content, translatedContent);
+        final linksValid = validationResult.linkValidation.isValid;
+        
+        if (!structureValid && !linksValid) {
+          print('🚫❗ [STRUCTURE & LINKS MISMATCH] File skipped: $fileName ❗🚫');
+        } else if (!structureValid) {
+          print('🚫❗ [STRUCTURE MISMATCH] File skipped: $fileName ❗🚫');
+        } else {
+          print('🚫❗ [LINKS MISMATCH] File skipped: $fileName ❗🚫');
+        }
+        
+        // Print detailed information
+        if (!structureValid) {
+          print('   Original structure: ${MarkdownStructureValidator.extractStructure(content).length} elements');
+          print('   Translated structure: ${MarkdownStructureValidator.extractStructure(translatedContent).length} elements');
+        }
+        
+        if (!linksValid) {
+          for (final issue in validationResult.linkValidation.issues) {
+            print('   Link issue: $issue');
+          }
+        }
+        
         if (onFailed != null) {
           onFailed();
         }
