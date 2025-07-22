@@ -63,6 +63,14 @@ class TranslatorImp implements Translator {
         TextPart(
             'evite assim:\n(https://github.com/flutter/engine/pull/25548) [macos] Libera o buffer de pixel copiado após a criação da textura (cla: sim, aguardando tree verde, platform-macos, embedder, cp: 2.2)\n\n(https://github.com/flutter/engine/pull/25548) [macos] Libera o buffer de pixel copiado após a criação da textura (cla: sim, aguardando tree verde, platform-macos, embedder, cp: 2.2)'),
       ]),
+      Content('user', [
+        TextPart(
+            'Algumas vezes vocês está esquecendo de devolver header com ### traduzido, ele simplemente não está na resposta.\n'),
+      ]),
+      Content('model', [
+        TextPart(
+            'Entendido. Vou me atentar para garantir que os cabeçalhos marcados com `###` sejam traduzidos e incluídos corretamente nas respostas futuras, mantendo a formatação original.'),
+      ]),
     ]);
 
     final content = Content.text(text);
