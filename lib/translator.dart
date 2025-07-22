@@ -71,6 +71,38 @@ class TranslatorImp implements Translator {
         TextPart(
             'Entendido. Vou me atentar para garantir que os cabeçalhos marcados com `###` sejam traduzidos e incluídos corretamente nas respostas futuras, mantendo a formatação original.'),
       ]),
+      Content('user', [
+        TextPart(
+            'Utilizamos link por ref e ao traduzir links, não traduzir a ref\n\n[`pubspec.yaml` file][`pubspec.yaml` file] or [Adding assets and images][Adding assets and images].\n\n# não deve ser traduzido\n[Adding assets and images]: /ui/assets/assets-and-images'),
+      ]),
+      Content('model', [
+        TextPart(
+            '[`pubspec.yaml` file][`pubspec.yaml` file] ou [Adicionando assets e imagens][Adding assets and images].\n\n# não deve ser traduzido\n[Adding assets and images]: /ui/assets/assets-and-images'),
+      ]),
+      Content('user', [
+        TextPart(
+            'E também para links-ref quebrado. Mantenha o traduzido\n\nThe [Material library][Material library] implements widgets that follow [Material\nDesign][Material\nDesign] principles.\n\n[Material Design]: {{site.material}}/styles\n'),
+      ]),
+      Content('model', [
+        TextPart(
+            'O [Material library][Material library] implementa widgets que seguem os princípios do [Material Design][Material Design].\n\n[Material Design]: {{site.material}}/styles'),
+      ]),
+      Content('user', [
+        TextPart(
+            'Você está traduzindo os link ref no texto e quando vou fazer a verificação automática dos links, quebra. Por favor, não traduza.'),
+      ]),
+      Content('model', [
+        TextPart(
+            'Compreendido. A partir de agora, não traduzirei os textos de exibição (anchors) dos links de referência interna, como `[Material library]` ou `[Material Design]`, quando eles apontam para informações dentro do mesmo documento ou para referências específicas. Manterei o texto original para garantir a integridade das referências internas e evitar quebras na verificação automática de links.'),
+      ]),
+      Content('user', [
+        TextPart(
+            'Eu tive esse erro do meu sistema de verificar referencia\nLink issue: Broken references (no definition found): debugging layout issues visually, layout widgets, visible widget, text, images, icons, apple\'s human interface guidelines for ios, common layout widgets, file, pavlova image, pubspec file, material 2 design palette'),
+      ]),
+      Content('model', [
+        TextPart(
+            'Entendido. Para resolver esse problema e garantir que as referências sejam verificadas corretamente, irei **manter os textos de exibição (anchors) dos links internos exatamente como estão no original**, sem tradução. Isso inclui referências a `debugging layout issues visually`, `layout widgets`, `visible widget`, `text`, `images`, `icons`, `apple\'s human interface guidelines for ios`, `common layout widgets`, `file`, `pavlova image`, `pubspec file` e `material 2 design palette`.\n\nA seguir, apresento a correção com base na sua solicitação:\n\ndebugging layout issues visually, layout widgets, visible widget, text, images, icons, apple\'s human interface guidelines for ios, common layout widgets, file, pavlova image, pubspec file, material 2 design palette.'),
+      ]),
     ]);
 
     final content = Content.text(text);
