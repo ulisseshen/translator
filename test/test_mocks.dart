@@ -109,3 +109,83 @@ class TestFileOperationTracker implements IFileOperationTracker {
   bool get hasWrites => writeOperations.isNotEmpty;
   int get writeCount => writeOperations.length;
 }
+
+/// Simple mock file wrapper for basic testing
+class SimpleMockFileWrapper implements IFileWrapper {
+  String content;
+  final String _path;
+  bool writeCalled = false;
+  
+  SimpleMockFileWrapper(this._path, this.content);
+  
+  @override
+  String get path => _path;
+  
+  @override
+  Future<String> readAsString() async => content;
+  
+  @override
+  Future<void> writeAsString(String contents) async {
+    content = contents;
+    writeCalled = true;
+  }
+  
+  @override
+  Future<int> length() async => 2048; // Force large file processing
+  
+  @override
+  Future<List<String>> readAsLines() async => content.split('\n');
+  
+  @override
+  bool exists() => true;
+}
+
+/// Mock translator that simulates preserving structure for chunk joining tests
+class StructurePreservingMockTranslator implements Translator {
+  @override
+  Future<String> translate(
+    String content, {
+    required Function onFirstModelError,
+    bool useSecond = false,
+  }) async {
+    // Return content as-is but trim to simulate real AI behavior
+    // This isolates the chunk joining bug from translation artifacts
+    return content.trim();
+  }
+}
+
+/// Mock translator that adds artifacts to simulate problematic real AI behavior
+class MockTranslatorWithArtifacts implements Translator {
+  @override
+  Future<String> translate(
+    String content, {
+    required Function onFirstModelError,
+    bool useSecond = false,
+  }) async {
+    // Simulate AI translator that adds prefixes or artifacts
+    return '[TRANSLATED] $content';
+  }
+}
+
+/// Mock translator that simulates real AI behavior - strips newlines and structure
+class RealAIBehaviorMockTranslator implements Translator {
+  @override
+  Future<String> translate(
+    String content, {
+    required Function onFirstModelError,
+    bool useSecond = false,
+  }) async {
+    // Simulate real AI translator that:
+    // 1. Strips trailing newlines
+    // 2. Sometimes removes blank lines
+    // 3. Doesn't preserve exact formatting
+    String result = content.trim(); // Remove leading/trailing whitespace
+    
+    // Simulate AI removing some blank lines (common AI behavior)
+    result = result.replaceAll(RegExp(r'\n\s*\n\s*\n'), '\n\n'); // Multiple newlines -> double newline
+    
+    // Most importantly: AI often doesn't end chunks with newlines
+    // This is the key difference from our previous mocks!
+    return result; // No trailing newline!
+  }
+}
