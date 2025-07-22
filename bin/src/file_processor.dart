@@ -240,7 +240,7 @@ class FileProcessorImpl implements FileProcessor {
             print('   Link issue: $issue');
             //save the file with suffix link_invalid.mad
             final invalidFileName = file.path.replaceFirst('.md', '_link_invalid.md');
-            await file.writeAsString(translatedContent);
+            await File(invalidFileName).writeAsString(translatedContent);
             print('   Invalid file saved as: $invalidFileName');
           }
         }
