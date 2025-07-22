@@ -1,13 +1,16 @@
 /// Centralized configuration for large file processing
 class LargeFileConfig {
   /// Maximum file size in KB before considering it a "large file"
-  static const int maxKbSize = 28;
+  /// Can be overridden for testing
+  static int maxKbSize = 20;
   
   /// Default maximum number of concurrent chunk translations
   static const int defaultMaxConcurrentChunks = 10;
   
   /// Default maximum chunk size in bytes (20KB)
-  static const int defaultChunkMaxBytes = 20480;
+  static const int _originalDefaultChunkMaxBytes = 20480;
+  static int _currentDefaultChunkMaxBytes = _originalDefaultChunkMaxBytes;
+  static int get defaultChunkMaxBytes => _currentDefaultChunkMaxBytes;
   
   /// Default batch size for parallel file processing
   static const int defaultBatchSize = 5;
@@ -36,5 +39,24 @@ class LargeFileConfig {
   /// Get the large file detection message
   static String getLargeFileDetectedMessage(String fileName) {
     return '📜 Large file detected. 🚀 Parallel processing: $fileName';
+  }
+  
+  /// Reset configuration to defaults (useful for testing)
+  static void resetToDefaults() {
+    maxKbSize = 20;
+    _currentDefaultChunkMaxBytes = _originalDefaultChunkMaxBytes;
+  }
+  
+  /// Configure for testing with smaller thresholds
+  static void configureForTesting({
+    int? maxKbSizeOverride,
+    int? chunkMaxBytesOverride,
+  }) {
+    if (maxKbSizeOverride != null) {
+      maxKbSize = maxKbSizeOverride;
+    }
+    if (chunkMaxBytesOverride != null) {
+      _currentDefaultChunkMaxBytes = chunkMaxBytesOverride;
+    }
   }
 }

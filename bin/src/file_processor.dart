@@ -21,33 +21,23 @@ class EnhancedParallelChunkProcessor {
     required this.translator,
     required this.maxConcurrent,
     required this.fileName,
-    this.maxBytes = LargeFileConfig.defaultChunkMaxBytes,
+    this.maxBytes = 20480, // Use const default, can be overridden
   });
 
-  Future<Map<String, ProcessingResult>> processFiles(List<File> files) async {
-    final results = <String, ProcessingResult>{};
+  Future<ProcessingResult> processChunks(String filePath, List<String> chunks) async {
+    _totalChunks = chunks.length;
+    _completedChunks = 0;
     
-    for (final file in files) {
-      final content = await file.readAsString();
-      final splitter = MarkdownSplitter(maxBytes: maxBytes);
-      final chunks = splitter.splitMarkdown(content);
-      
-      _totalChunks = chunks.length;
-      _completedChunks = 0;
-      
-      final translatedChunks = await _processChunksWithProgress(file.path, chunks);
-      
-      results[file.path] = ProcessingResult(
-        filePath: file.path,
-        chunks: chunks,
-        translatedChunks: translatedChunks,
-        processingOrder: List.generate(chunks.length, (index) => index),
-        chunkCompletionTimes: List.generate(chunks.length, (index) => DateTime.now()),
-        isComplete: true,
-      );
-    }
+    final translatedChunks = await _processChunksWithProgress(filePath, chunks);
     
-    return results;
+    return ProcessingResult(
+      filePath: filePath,
+      chunks: chunks,
+      translatedChunks: translatedChunks,
+      processingOrder: List.generate(chunks.length, (index) => index),
+      chunkCompletionTimes: List.generate(chunks.length, (index) => DateTime.now()),
+      isComplete: true,
+    );
   }
 
   Future<List<String>> _processChunksWithProgress(String filePath, List<String> chunks) async {
@@ -72,7 +62,6 @@ class EnhancedParallelChunkProcessor {
           // Show progress like directory translation
           final remaining = _totalChunks - _completedChunks;
           print('✅ $fileName - parte ${i + 1}/$_totalChunks traduzida ($_completedChunks/$_totalChunks concluídas, $remaining restantes) 🔥⚡');
-          
         } catch (e) {
           translatedChunks[i] = chunks[i]; // Fallback to original content
           _completedChunks++;
@@ -124,14 +113,13 @@ class FileProcessorImpl implements FileProcessor {
   final Translator translator;
   final MarkdownProcessor markdownProcessor;
   final int maxConcurrentChunks;
-  final int chunkMaxBytes;
 
   FileProcessorImpl(
     this.translator, 
     this.markdownProcessor, {
-    this.maxConcurrentChunks = LargeFileConfig.defaultMaxConcurrentChunks,
-    this.chunkMaxBytes = LargeFileConfig.defaultChunkMaxBytes,
+    this.maxConcurrentChunks = 10, // LargeFileConfig.defaultMaxConcurrentChunks
   });
+
 
   @override
   Future<String> readFile(IFileWrapper file) async {
@@ -182,21 +170,21 @@ class FileProcessorImpl implements FileProcessor {
       if (processLargeFiles && fileSizeKB > LargeFileConfig.maxKbSize) {
         print(LargeFileConfig.getLargeFileDetectedMessage(Utils.getFileName(file)));
         
-        // First, split the file and show the parts
-        final splitter = MarkdownSplitter(maxBytes: chunkMaxBytes);
+        // Split the file once
+        final splitter = MarkdownSplitter(maxBytes: LargeFileConfig.defaultChunkMaxBytes);
         final chunks = splitter.splitMarkdown(content);
         
         if (chunks.length > 1) {
           print('✂️ Arquivo dividido em ${chunks.length} partes:');
           print('🚀 Iniciando tradução paralela das ${chunks.length} partes...\n');
         }
+
         
-        // Use parallel chunk processor for large files
-        final tempFile = File(file.path);
+        // Use parallel chunk processor with pre-split chunks
         final processor = EnhancedParallelChunkProcessor(
           translator: translator,
           maxConcurrent: maxConcurrentChunks,
-          maxBytes: chunkMaxBytes,
+          maxBytes: LargeFileConfig.defaultChunkMaxBytes,
           fileName: Utils.getFileName(file),
         );
 
@@ -322,7 +310,6 @@ class FileProcessorImpl implements FileProcessor {
                 translator,
                 MarkdownProcessorImpl(),
                 maxConcurrentChunks: maxConcurrentChunks,
-                chunkMaxBytes: chunkMaxBytes,
               ).translateOne(
                 file,
                 processLargeFiles,

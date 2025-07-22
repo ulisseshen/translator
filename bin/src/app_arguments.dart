@@ -16,7 +16,6 @@ class AppArguments {
   final bool? multiFiles;
   final List<String>? multipleFilePaths;
   final int maxConcurrentChunks;
-  final int chunkMaxBytes;
 
   AppArguments._({
     required this.showHelp,
@@ -33,8 +32,7 @@ class AppArguments {
     this.multiFiles,
     this.filePath,
     this.multipleFilePaths,
-    this.maxConcurrentChunks = LargeFileConfig.defaultMaxConcurrentChunks,
-    this.chunkMaxBytes = LargeFileConfig.defaultChunkMaxBytes,
+    this.maxConcurrentChunks = 10, // LargeFileConfig.defaultMaxConcurrentChunks
   });
 
   factory AppArguments.parse(List<String> arguments) {
@@ -99,10 +97,11 @@ class AppArguments {
       maxConcurrentChunks = int.tryParse(arguments[concurrentIndex + 1]) ?? LargeFileConfig.defaultMaxConcurrentChunks;
     }
 
-    int chunkMaxBytes = LargeFileConfig.defaultChunkMaxBytes;
+    // Configure chunk size globally if specified
     final chunkSizeIndex = arguments.indexOf('--chunk-size');
     if (chunkSizeIndex != -1 && chunkSizeIndex + 1 < arguments.length) {
-      chunkMaxBytes = int.tryParse(arguments[chunkSizeIndex + 1]) ?? LargeFileConfig.defaultChunkMaxBytes;
+      final chunkMaxBytes = int.tryParse(arguments[chunkSizeIndex + 1]) ?? LargeFileConfig.defaultChunkMaxBytes;
+      LargeFileConfig.configureForTesting(chunkMaxBytesOverride: chunkMaxBytes);
     }
 
     return AppArguments._(
@@ -121,7 +120,6 @@ class AppArguments {
       multiFiles: multiFiles,
       multipleFilePaths: multiPaths,
       maxConcurrentChunks: maxConcurrentChunks,
-      chunkMaxBytes: chunkMaxBytes,
     );
   }
 

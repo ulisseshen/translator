@@ -19,7 +19,6 @@ void main(List<String> arguments) async {
     TranslatorImp(),
     MarkdownProcessorImpl(),
     maxConcurrentChunks: args.maxConcurrentChunks,
-    chunkMaxBytes: args.chunkMaxBytes,
   );
 
   final fileCleaner = FileCleanerImpl();
