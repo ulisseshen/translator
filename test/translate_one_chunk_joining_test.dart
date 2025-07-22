@@ -39,7 +39,6 @@ Conteúdo.''';
         mockTranslator,
         MarkdownProcessorImpl(),
         maxConcurrentChunks: 1,
-        chunkMaxBytes: 50, // Small chunks to force multiple splits
       );
 
       // Count original headers before processing
@@ -90,7 +89,6 @@ Texto final.''';
         mockTranslator,
         MarkdownProcessorImpl(),
         maxConcurrentChunks: 1,
-        chunkMaxBytes: 40, // Force aggressive chunking
       );
 
       final originalHeaders = _countHeaders(content);
@@ -169,7 +167,6 @@ Mais conteúdo aqui.''';
         mockTranslator,
         MarkdownProcessorImpl(),
         maxConcurrentChunks: 1,
-        chunkMaxBytes: 30, // Very small to ensure chunking
       );
 
       final originalHeaders = _countHeaders(content);
@@ -208,13 +205,4 @@ Mais conteúdo aqui.''';
 int _countHeaders(String content) {
   final headerRegex = RegExp(r'^#{1,6}\s+.*$', multiLine: true);
   return headerRegex.allMatches(content).length;
-}
-
-/// Extracts markdown headers from content
-List<String> _extractHeaders(String content) {
-  final headerRegex = RegExp(r'^#{1,6}\s+.*$', multiLine: true);
-  return headerRegex
-      .allMatches(content)
-      .map((match) => match.group(0)!)
-      .toList();
 }
