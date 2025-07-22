@@ -7,11 +7,6 @@ class MarkdownLinkValidator {
   /// Pattern to match link definitions: [ref]: url
   static final _linkDefinitionPattern = RegExp(r'^\s*\[([^\]]+)\]:\s*(.+)$', multiLine: true);
   
-  /// Pattern to match code blocks (fenced with ```)
-  static final _fencedCodeBlockPattern = RegExp(r'```[\s\S]*?```', multiLine: true);
-  
-  /// Pattern to match inline code spans
-  static final _inlineCodePattern = RegExp(r'`[^`]+`');
   
   /// Pattern to match HTML comments
   static final _htmlCommentPattern = RegExp(r'<!--.*?-->', dotAll: true);
@@ -82,26 +77,27 @@ class MarkdownLinkValidator {
   
   /// Extracts reference link information using robust regex patterns
   static ReferenceLinkInfo _extractReferenceLinkInfo(String markdown) {
-    // Clean content by removing code blocks and comments first
-    String cleanContent = _removeCodeBlocksAndComments(markdown);
-    
     final references = <String>{};
     final definitions = <String, String>{};
     
-    // Find all reference-style links: [text][ref]
-    final referenceMatches = _referenceLinkPattern.allMatches(cleanContent);
+    // Extract reference links from original content BEFORE cleaning
+    // This prevents code span removal from breaking reference links
+    final referenceMatches = _referenceLinkPattern.allMatches(markdown);
     for (final match in referenceMatches) {
-      final reference = (match.group(2) ?? '').toLowerCase().trim();
+      // Normalize line breaks and multiple spaces in reference keys
+      final reference = (match.group(2) ?? '').toLowerCase().trim()
+          .replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ');
       if (reference.isNotEmpty) {
         references.add(reference);
       } else {
         // Handle shortcut reference links [text][] - use text as reference
-        final text = match.group(1)!.toLowerCase().trim();
+        final text = match.group(1)!.toLowerCase().trim()
+            .replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ');
         references.add(text);
       }
     }
     
-    // Find link definitions: [ref]: url
+    // Find link definitions: [ref]: url (always from original content)
     final definitionMatches = _linkDefinitionPattern.allMatches(markdown);
     for (final match in definitionMatches) {
       final reference = match.group(1)!.toLowerCase().trim();
@@ -114,34 +110,6 @@ class MarkdownLinkValidator {
     return ReferenceLinkInfo(references, definitions);
   }
   
-  /// Remove code blocks, comments, and other exclusions to avoid false positives
-  /// Following the original Flutter implementation exclusions
-  static String _removeCodeBlocksAndComments(String content) {
-    String cleaned = content;
-    
-    // Remove HTML comments first (can contain TODO links that should be ignored)
-    cleaned = cleaned.replaceAll(_htmlCommentPattern, '');
-    
-    // Remove HTML pre/code blocks
-    cleaned = cleaned.replaceAll(_preCodeBlockPattern, '');
-    
-    // Remove fenced code blocks
-    cleaned = cleaned.replaceAll(_fencedCodeBlockPattern, '');
-    
-    // Remove inline code spans
-    cleaned = cleaned.replaceAll(_inlineCodePattern, '');
-    
-    // Remove highlight blocks 
-    cleaned = cleaned.replaceAll(_highlightBlockPattern, '');
-    
-    // Remove PR titles in paragraphs (often found in Flutter release notes)
-    cleaned = cleaned.replaceAll(_pullRequestTitlePattern, '');
-    
-    // Remove PR titles in list items (often found in Flutter release notes)
-    cleaned = cleaned.replaceAll(_pullRequestTitleInListItemPattern, '');
-    
-    return cleaned;
-  }
   
   /// Validates that reference links are consistent between original and translated
   /// Following the original Flutter implementation approach - focus on broken references
