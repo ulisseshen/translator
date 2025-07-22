@@ -200,10 +200,8 @@ class FileProcessorImpl implements FileProcessor {
           fileName: Utils.getFileName(file),
         );
 
-        final results = await processor.processFiles([tempFile]);
-        final result = results[tempFile.path]!;
-        
-        translatedContent = result.translatedChunks.join('');
+        final result = await processor.processChunks(file.path, chunks);
+        translatedContent = result.translatedChunks.join('\n\n');
       } else {
         // Single translation for small files
         try {
