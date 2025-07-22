@@ -2,6 +2,13 @@ import 'dart:io';
 
 import 'package:translator/translator.dart';
 
+class TranslationResult {
+  final int successCount;
+  final int failureCount;
+
+  TranslationResult(this.successCount, this.failureCount);
+}
+
 abstract class IFileWrapper {
   Future<String> readAsString();
   Future<void> writeAsString(String content);
@@ -44,7 +51,7 @@ abstract class FileProcessor {
     Function()? onComplete,
     Function()? onFailed,
   });
-  Future<int> translateFiles(
+  Future<TranslationResult> translateFiles(
     List<IFileWrapper> filesToTranslate,
     bool processLargeFiles, {
     bool useSecond = false,

@@ -114,7 +114,7 @@ void main(List<String> arguments) async {
 
   final stopwatchTotal = Stopwatch()..start();
 
-  int fileCount = await fileProcessor.translateFiles(
+  TranslationResult result = await fileProcessor.translateFiles(
     filesToTranslate,
     args.translateGreater,
     useSecond: args.useSecond,
@@ -125,7 +125,8 @@ void main(List<String> arguments) async {
   final durationIsSeconds = stopwatchTotal.elapsed.inSeconds;
   print('\n📔 Resumo da Tradução:');
   print('---------------------');
-  print('Total de arquivos traduzidos: $fileCount');
+  print('Arquivos traduzidos com sucesso: ${result.successCount}');
+  print('Arquivos com erro: ${result.failureCount}');
   print('Tempo total de tradução: $durationIsSeconds segundos');
   print('Tradução concluída para o diretório: ${directory.path}');
 }

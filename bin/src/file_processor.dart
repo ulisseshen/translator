@@ -284,12 +284,11 @@ class FileProcessorImpl implements FileProcessor {
   }
 
   @override
-  Future<int> translateFiles(
+  Future<TranslationResult> translateFiles(
     List<IFileWrapper> filesToTranslate,
     bool processLargeFiles, {
     bool useSecond = false,
   }) async {
-    int fileCount = 0;
     int completedCount = 0;
     int failedCount = 0;
     const batchSize = LargeFileConfig.defaultBatchSize; // Reduced batch size for better parallel processing
@@ -327,7 +326,7 @@ class FileProcessorImpl implements FileProcessor {
                   stopwatchFile.stop();
                 },
               );
-              fileCount++;
+              // fileCount removed - we use completedCount and failedCount instead
             } catch (e) {
               final currentFailedIndex = ++failedCount;
               print('❌ File translation failed ($currentFailedIndex failed of ${filesToTranslate.length}): ${Utils.getFileName(file)}, em ${stopwatchFile.elapsedMilliseconds}ms - Error: $e');
@@ -344,6 +343,6 @@ class FileProcessorImpl implements FileProcessor {
       }
     }
 
-    return fileCount;
+    return TranslationResult(completedCount, failedCount);
   }
 }
