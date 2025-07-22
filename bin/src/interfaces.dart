@@ -50,11 +50,15 @@ abstract class FileProcessor {
     int? totalFiles,
     Function()? onComplete,
     Function()? onFailed,
+    bool saveSent = false,
+    bool saveReceived = false,
   });
   Future<TranslationResult> translateFiles(
     List<IFileWrapper> filesToTranslate,
     bool processLargeFiles, {
     bool useSecond = false,
+    bool saveSent = false,
+    bool saveReceived = false,
   });
 }
 

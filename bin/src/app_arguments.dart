@@ -10,6 +10,8 @@ class AppArguments {
   final bool cleanMarkdown;
   final bool replaceLinks;
   final bool useV2;
+  final bool saveSent;
+  final bool saveReceived;
   final String directoryPath;
   final String extension;
   final String? filePath;
@@ -27,6 +29,8 @@ class AppArguments {
     required this.cleanMarkdown,
     required this.replaceLinks,
     required this.useV2,
+    required this.saveSent,
+    required this.saveReceived,
     required this.directoryPath,
     required this.extension,
     this.multiFiles,
@@ -49,6 +53,8 @@ class AppArguments {
         cleanMarkdown: false,
         replaceLinks: false,
         useV2: false,
+        saveSent: false,
+        saveReceived: false,
         directoryPath: '',
         extension: '.md',
         filePath: null,
@@ -64,6 +70,8 @@ class AppArguments {
     final cleanMarkdown = arguments.contains('-c');
     final replaceLinks = arguments.contains('-l');
     final useV2 = arguments.contains('-v2');
+    final saveSent = arguments.contains('--save-sent') || arguments.contains('-ss');
+    final saveReceived = arguments.contains('--save-received') || arguments.contains('-sr');
     final multiFiles = arguments.contains('-mf');
      final mfIndex = arguments.indexOf('-mf');
 
@@ -114,6 +122,8 @@ class AppArguments {
       cleanMarkdown: cleanMarkdown,
       replaceLinks: replaceLinks,
       useV2: useV2,
+      saveSent: saveSent,
+      saveReceived: saveReceived,
       directoryPath: directoryPath,
       extension: extension,
       filePath: filePath,
@@ -137,6 +147,8 @@ class AppArguments {
     print('-c                  Clean Markdown files');
     print('-l                  Replace links');
     print('-v2                 Use the second version of the tool');
+    print('-ss, --save-sent    Save original content as sent{index}.md');
+    print('-sr, --save-received Save translated content as received{index}.md');
     print('-e <extension>      Specify file extension (default: .md)');
   }
 }

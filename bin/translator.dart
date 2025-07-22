@@ -36,7 +36,9 @@ void main(List<String> arguments) async {
       exit(1);
     }
     await fileProcessor.translateOne(
-        file, args.translateGreater, TranslatorImp(), args.useSecond);
+        file, args.translateGreater, TranslatorImp(), args.useSecond,
+        saveSent: args.saveSent,
+        saveReceived: args.saveReceived);
 
     return;
   }
@@ -118,6 +120,8 @@ void main(List<String> arguments) async {
     filesToTranslate,
     args.translateGreater,
     useSecond: args.useSecond,
+    saveSent: args.saveSent,
+    saveReceived: args.saveReceived,
   );
 
   stopwatchTotal.stop();
