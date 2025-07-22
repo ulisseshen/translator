@@ -233,6 +233,10 @@ class FileProcessorImpl implements FileProcessor {
         if (!structureValid) {
           print('   Original structure: ${MarkdownStructureValidator.countHeaders(content)} elements');
           print('   Translated structure: ${MarkdownStructureValidator.countHeaders(translatedContent)} elements');
+          //save it with prefix structure_invalid.mad
+          final invalidFileName = file.path.replaceFirst('.md', '_structure_invalid.md');
+          await File(invalidFileName).writeAsString(translatedContent);
+          print('   Invalid file saved as: $invalidFileName');
         }
         
         if (!linksValid) {
