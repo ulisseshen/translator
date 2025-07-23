@@ -11,6 +11,9 @@ class MarkdownLinkValidator {
   /// Pattern to match HTML comments
   static final _htmlCommentPattern = RegExp(r'<!--.*?-->', dotAll: true);
   
+  /// Pattern to match Jekyll/Liquid comment blocks
+  static final _jekyllCommentPattern = RegExp(r'\{%\s*comment\s*%\}.*?\{%\s*endcomment\s*-?%\}', dotAll: true);
+  
   /// Pattern to match HTML pre/code blocks
   static final _preCodeBlockPattern = RegExp(r'<pre.*?</pre>', dotAll: true);
   
@@ -45,26 +48,57 @@ class MarkdownLinkValidator {
   /// Find invalid reference links in content - following original Flutter implementation
   /// This method closely mirrors the original `_findInContent` function
   static List<String> findInvalidReferences(String content) {
+    // Extract reference link information to check for broken references
+    final info = _extractReferenceLinkInfo(content);
+    final invalidReferences = <String>[];
+    
     String cleaned = content;
     
     // Apply all exclusions first (matches original _allReplacements)
     cleaned = cleaned.replaceAll(_htmlCommentPattern, '');
+    cleaned = cleaned.replaceAll(_jekyllCommentPattern, '');
     cleaned = cleaned.replaceAll(_preCodeBlockPattern, '');
     cleaned = cleaned.replaceAll(_pullRequestTitlePattern, '');
     cleaned = cleaned.replaceAll(_pullRequestTitleInListItemPattern, '');
     cleaned = cleaned.replaceAll(_highlightBlockPattern, '');
     
-    // Find all reference-style links that weren't properly rendered
-    final invalidFound = _invalidLinkReferencePattern.allMatches(cleaned);
+    // Remove fenced code blocks (``` ... ```)
+    cleaned = cleaned.replaceAll(RegExp(r'```[\s\S]*?```', multiLine: true), '');
     
-    if (invalidFound.isEmpty) {
-      return const [];
+    // Remove indented code blocks (4 spaces or a tab at line start)
+    cleaned = cleaned.replaceAllMapped(
+      RegExp(r'^( {4,}|\t).*(\n|\r|$)', multiLine: true),
+      (match) => '',
+    );
+    
+    // Remove inline code spans (`...`)
+    cleaned = cleaned.replaceAll(RegExp(r'`[^`]*?`'), '');
+    
+    // Find all reference-style links
+    final allReferences = _invalidLinkReferencePattern.allMatches(cleaned);
+    
+    // Check each reference to see if it has a definition
+    for (final match in allReferences) {
+      final fullMatch = match[0];
+      if (fullMatch != null) {
+        // Extract the reference key from [text][ref] pattern
+        final refMatch = _referenceLinkPattern.firstMatch(fullMatch);
+        if (refMatch != null) {
+          final reference = (refMatch.group(2) ?? '').toLowerCase().trim()
+              .replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ');
+          final actualRef = reference.isEmpty 
+              ? refMatch.group(1)!.toLowerCase().trim().replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ')
+              : reference;
+          
+          // Check if this reference has a definition
+          if (!info.definitions.containsKey(actualRef)) {
+            invalidReferences.add(fullMatch);
+          }
+        }
+      }
     }
     
-    return invalidFound
-        .map((e) => e[0])
-        .whereType<String>()
-        .toList(growable: false);
+    return invalidReferences;
   }
   
   /// Gets detailed validation results for debugging
@@ -80,8 +114,9 @@ class MarkdownLinkValidator {
     final references = <String>{};
     final definitions = <String, String>{};
 
-    // Remove HTML comments
+    // Remove HTML comments and Jekyll comments
     String cleaned = markdown.replaceAll(_htmlCommentPattern, '');
+    cleaned = cleaned.replaceAll(_jekyllCommentPattern, '');
 
     // Remove fenced code blocks (``` ... ```)
     cleaned = cleaned.replaceAll(RegExp(r'```[\s\S]*?```', multiLine: true), '');
