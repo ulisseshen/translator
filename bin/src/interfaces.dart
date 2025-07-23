@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:translator/markdown_spliter.dart';
 import 'package:translator/translator.dart';
 
 class TranslationResult {
@@ -70,7 +71,7 @@ abstract class LinkProcessor {
 }
 
 abstract class MarkdownProcessor {
-  List<String> splitMarkdownContent(String content, {required int maxBytes});
+  List<SplittedChunk> splitMarkdownContent(String content, {required int maxBytes});
 
   /// Remove as marcações \`\`\`markdown da primeira linha e ``` da última ou penúltima linha do conteúdo.
   String removeMarkdownSyntax(String content);
