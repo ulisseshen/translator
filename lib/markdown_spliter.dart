@@ -46,9 +46,9 @@ class MarkdownSplitter {
   List<SplittedChunk> splitMarkdown(String content) {
     final List<SplittedChunk> result = [];
     
-    // First, split by ### sections
+    // First, split by ## to #### sections
     final List<String> primarySections =
-        content.split(RegExp(r'(?=^### )', multiLine: true));
+        content.split(RegExp(r'(?=^#{2,4} )', multiLine: true));
 
     for (final section in primarySections) {
       final sectionSize = utf8.encode(section).length;
