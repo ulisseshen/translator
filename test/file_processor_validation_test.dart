@@ -155,26 +155,34 @@ function test() {
       });
 
       test('should be blocked by structure validation (not markdown validation)', () async {
-        const invalidReferenceLinks = '''# Test Document
+        const originalContent = '''# Test Document
 
-This document has broken reference-style links.
+This document has reference-style links that will be translated.
 
 Here's a [valid inline link](https://example.com).
 
-Here's a [broken reference link][missing-ref] that has no definition.
+Here's a [working reference link][example-ref] that has a definition.
 
-Here's another [broken link][undefined] reference.
+Here's a properly defined reference link [another link][working-link].
 
-Here's a properly defined reference link [working link][1].
-
-[1]: https://example.com
-
-And here's [another broken][2] reference without definition.
+[example-ref]: https://example.com
+[working-link]: https://example.com
 
 Normal content continues.
 ''';
 
-        final tempFile = await _createTempFile('bad_refs_test.md', invalidReferenceLinks);
+        // Create a mock translator that simulates real AI behavior:
+        // It translates the reference link identifiers, breaking the connection to definitions
+        final brokenRefTranslator = MockTranslator(responseProvider: (text) {
+          return text
+              .replaceAll('[working reference link][example-ref]', '[working reference link][exemplo-ref]')
+              .replaceAll('[another link][working-link]', '[another link][link-funcionando]');
+          // Note: The definitions remain as [example-ref] and [working-link]
+          // but references now point to [exemplo-ref] and [link-funcionando]
+          // This creates broken references that should fail validation
+        });
+
+        final tempFile = await _createTempFile('ref_links_test.md', originalContent);
         bool onCompleteCalled = false;
         bool onFailedCalled = false;
 
@@ -182,16 +190,16 @@ Normal content continues.
           await fileProcessor.translateOne(
             FileWrapper(tempFile.path),
             false,
-            mockTranslator,
+            brokenRefTranslator,
             false,
             onComplete: () => onCompleteCalled = true,
             onFailed: () => onFailedCalled = true,
           );
 
           // This file is blocked by structure validation (not markdown validation)
-          // The broken reference links cause structure mismatch after translation
-          expect(onFailedCalled, isTrue, reason: 'Should fail due to structure validation blocking broken references');
-          expect(mockTranslator.translateCallCount, equals(1), reason: 'Should translate but fail structure validation');
+          // The translated reference links create broken references after translation
+          expect(onFailedCalled, isTrue, reason: 'Should fail due to structure validation blocking broken references after translation');
+          expect(brokenRefTranslator.translateCallCount, equals(1), reason: 'Should translate but fail structure validation');
         } finally {
           await tempFile.delete();
         }
