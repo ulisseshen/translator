@@ -275,7 +275,7 @@ Mais conteúdo aqui.''';
           reason: 'All code blocks should be preserved unchanged');
       
       // Verify translation efficiency - should only translate translatable chunks
-      expect(mockTranslator.translationCallCount, 3,
+      expect(mockTranslator.translationCallCount, translatableChunks,
           reason: 'Should only translate translatable chunks, not code blocks');
       
       print('✅ Large file translation with code block separation successful!');
