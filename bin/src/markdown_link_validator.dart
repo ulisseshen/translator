@@ -49,8 +49,8 @@ class MarkdownLinkValidator {
   /// This method closely mirrors the original `_findInContent` function
   /// Returns only reference patterns that should have definitions but don't
   static List<String> findInvalidReferences(String content) {
-    // Extract all reference link information
-    final info = _extractReferenceLinkInfo(content);
+    // Extract all reference link information - use restrictive mode for single content validation
+    final info = _extractReferenceLinkInfo(content, restrictToDefinedReferences: true);
     final invalidReferences = <String>[];
     
     String cleaned = content;
@@ -113,14 +113,17 @@ class MarkdownLinkValidator {
   
   /// Gets detailed validation results for debugging
   static ReferenceLinkValidationResult validateReferenceLinksDetailed(String original, String translated) {
-    final originalInfo = _extractReferenceLinkInfo(original);
-    final translatedInfo = _extractReferenceLinkInfo(translated);
+    // Detect if we're comparing content to itself (self-validation)
+    final isSelfValidation = original == translated;
     
-    return _validateLinkConsistency(originalInfo, translatedInfo);
+    final originalInfo = _extractReferenceLinkInfo(original, restrictToDefinedReferences: isSelfValidation);
+    final translatedInfo = _extractReferenceLinkInfo(translated, restrictToDefinedReferences: isSelfValidation);
+    
+    return _validateLinkConsistency(originalInfo, translatedInfo, original, translated);
   }
   
   /// Extracts reference link information using robust regex patterns
-  static ReferenceLinkInfo _extractReferenceLinkInfo(String markdown) {
+  static ReferenceLinkInfo _extractReferenceLinkInfo(String markdown, {bool restrictToDefinedReferences = false}) {
     final references = <String>{};
     final definitions = <String, String>{};
 
@@ -150,8 +153,7 @@ class MarkdownLinkValidator {
       }
     }
 
-    // Only extract reference links that have corresponding definitions
-    // This prevents false positives for patterns like [Text Scaling][Material] which are labels
+    // Extract reference links from cleaned content
     final referenceMatches = _referenceLinkPattern.allMatches(cleaned);
     for (final match in referenceMatches) {
       final reference = (match.group(2) ?? '').toLowerCase().trim()
@@ -160,8 +162,14 @@ class MarkdownLinkValidator {
           ? match.group(1)!.toLowerCase().trim().replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ')
           : reference;
       
-      // Only include as a reference if there's a corresponding definition
-      if (definitions.containsKey(actualRef)) {
+      if (restrictToDefinedReferences) {
+        // Only include as a reference if there's a corresponding definition
+        // This prevents false positives for patterns like [Text Scaling][Material] which are labels
+        if (definitions.containsKey(actualRef)) {
+          references.add(actualRef);
+        }
+      } else {
+        // Include all reference patterns - needed for translation validation
         references.add(actualRef);
       }
     }
@@ -172,7 +180,7 @@ class MarkdownLinkValidator {
   
   /// Validates that reference links are consistent between original and translated
   /// Following the original Flutter implementation approach - focus on broken references
-  static ReferenceLinkValidationResult _validateLinkConsistency(ReferenceLinkInfo original, ReferenceLinkInfo translated) {
+  static ReferenceLinkValidationResult _validateLinkConsistency(ReferenceLinkInfo original, ReferenceLinkInfo translated, String originalMarkdown, String translatedMarkdown) {
     final issues = <String>[];
     final warnings = <String>[];
     
@@ -184,8 +192,13 @@ class MarkdownLinkValidator {
     // Check references in translated content that don't have definitions
     for (final reference in translated.references) {
       if (!translated.definitions.containsKey(reference)) {
-        // Only treat as broken if the original had this reference and it had a definition
-        if (original.references.contains(reference) && original.definitions.containsKey(reference)) {
+        // For translation validation (different content), report all broken references
+        // For self-validation (same content), only report if original had valid references
+        if (originalMarkdown != translatedMarkdown) {
+          // Translation validation: report all broken references
+          brokenReferences.add(reference);
+        } else if (original.references.contains(reference) && original.definitions.containsKey(reference)) {
+          // Self-validation: only report if original had this reference and definition
           brokenReferences.add(reference);
         }
       }
