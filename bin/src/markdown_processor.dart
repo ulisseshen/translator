@@ -4,7 +4,7 @@ import 'app.dart';
 
 class MarkdownProcessorImpl implements MarkdownProcessor {
   @override
-  List<String> splitMarkdownContent(String content, {required int maxBytes}) {
+  List<SplittedChunk> splitMarkdownContent(String content, {required int maxBytes}) {
     final splitter = MarkdownSplitter(maxBytes: maxBytes);
     return splitter.splitMarkdown(content);
   }
