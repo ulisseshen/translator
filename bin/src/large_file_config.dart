@@ -2,8 +2,9 @@
 class LargeFileConfig {
   /// Maximum file size in KB before considering it a "large file"
   /// Can be overridden for testing
-  static int maxKbSize = 20;
-  
+  static int get maxKbSize => _maxKbSize;
+  static int _maxKbSize = 20;
+
   /// Default maximum number of concurrent chunk translations
   static const int defaultMaxConcurrentChunks = 10;
   
@@ -43,7 +44,7 @@ class LargeFileConfig {
   
   /// Reset configuration to defaults (useful for testing)
   static void resetToDefaults() {
-    maxKbSize = 20;
+    _maxKbSize = 20;
     _currentDefaultChunkMaxBytes = _originalDefaultChunkMaxBytes;
   }
   
@@ -53,7 +54,7 @@ class LargeFileConfig {
     int? chunkMaxBytesOverride,
   }) {
     if (maxKbSizeOverride != null) {
-      maxKbSize = maxKbSizeOverride;
+      _maxKbSize = maxKbSizeOverride;
     }
     if (chunkMaxBytesOverride != null) {
       _currentDefaultChunkMaxBytes = chunkMaxBytesOverride;
