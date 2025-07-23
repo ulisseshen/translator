@@ -47,8 +47,9 @@ class MarkdownLinkValidator {
   
   /// Find invalid reference links in content - following original Flutter implementation
   /// This method closely mirrors the original `_findInContent` function
+  /// Returns only reference patterns that should have definitions but don't
   static List<String> findInvalidReferences(String content) {
-    // Extract reference link information to check for broken references
+    // Extract all reference link information
     final info = _extractReferenceLinkInfo(content);
     final invalidReferences = <String>[];
     
@@ -90,9 +91,18 @@ class MarkdownLinkValidator {
               ? refMatch.group(1)!.toLowerCase().trim().replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ')
               : reference;
           
-          // Check if this reference has a definition
-          if (!info.definitions.containsKey(actualRef)) {
-            invalidReferences.add(fullMatch);
+          // Only report as invalid if this reference has an actual definition available
+          // This prevents false positives for patterns like [Text Scaling][Material] 
+          // which are labels, not reference links
+          if (!info.definitions.containsKey(actualRef) && info.definitions.isNotEmpty) {
+            // Check if there are any definitions that could match this pattern
+            // Only report as broken if there's evidence this should be a reference link
+            final hasRelatedDefinitions = info.definitions.keys.any((key) => 
+              key.contains(actualRef.split(' ').first) || actualRef.contains(key.split(' ').first));
+            
+            if (hasRelatedDefinitions) {
+              invalidReferences.add(fullMatch);
+            }
           }
         }
       }
@@ -130,28 +140,29 @@ class MarkdownLinkValidator {
     // Remove inline code spans (`...`)
     cleaned = cleaned.replaceAll(RegExp(r'`[^`]*?`'), '');
 
-    // Extract reference links from cleaned content
-    final referenceMatches = _referenceLinkPattern.allMatches(cleaned);
-    for (final match in referenceMatches) {
-      final reference = (match.group(2) ?? '').toLowerCase().trim()
-          .replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ');
-      if (reference.isNotEmpty) {
-        references.add(reference);
-      } else {
-        // Handle shortcut reference links [text][] - use text as reference
-        final text = match.group(1)!.toLowerCase().trim()
-            .replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ');
-        references.add(text);
-      }
-    }
-
-    // Find link definitions: [ref]: url (from cleaned content)
+    // First, find all link definitions: [ref]: url (from cleaned content)
     final definitionMatches = _linkDefinitionPattern.allMatches(cleaned);
     for (final match in definitionMatches) {
       final reference = match.group(1)!.toLowerCase().trim();
       final url = match.group(2)!.trim();
       if (url.isNotEmpty) {
         definitions[reference] = url;
+      }
+    }
+
+    // Only extract reference links that have corresponding definitions
+    // This prevents false positives for patterns like [Text Scaling][Material] which are labels
+    final referenceMatches = _referenceLinkPattern.allMatches(cleaned);
+    for (final match in referenceMatches) {
+      final reference = (match.group(2) ?? '').toLowerCase().trim()
+          .replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ');
+      final actualRef = reference.isEmpty 
+          ? match.group(1)!.toLowerCase().trim().replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ')
+          : reference;
+      
+      // Only include as a reference if there's a corresponding definition
+      if (definitions.containsKey(actualRef)) {
+        references.add(actualRef);
       }
     }
 
@@ -166,11 +177,27 @@ class MarkdownLinkValidator {
     final warnings = <String>[];
     
     // Primary check: Find broken references (references without definitions) in translated content
-    // This matches the original Flutter implementation's main concern
+    // BUT only report as issues if the reference existed in the original and had a definition
+    // This prevents false positives for patterns that look like reference links but aren't
     final brokenReferences = <String>[];
+    
+    // Check references in translated content that don't have definitions
     for (final reference in translated.references) {
       if (!translated.definitions.containsKey(reference)) {
-        brokenReferences.add(reference);
+        // Only treat as broken if the original had this reference and it had a definition
+        if (original.references.contains(reference) && original.definitions.containsKey(reference)) {
+          brokenReferences.add(reference);
+        }
+      }
+    }
+    
+    // Also check for original references that were lost during translation 
+    // (they had definitions in original but don't appear in translated at all)
+    for (final originalRef in original.references) {
+      if (original.definitions.containsKey(originalRef) && 
+          !translated.references.contains(originalRef) && 
+          !translated.definitions.containsKey(originalRef)) {
+        brokenReferences.add(originalRef);
       }
     }
     
