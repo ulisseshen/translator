@@ -79,12 +79,25 @@ class MarkdownLinkValidator {
   static ReferenceLinkInfo _extractReferenceLinkInfo(String markdown) {
     final references = <String>{};
     final definitions = <String, String>{};
-    
-    // Extract reference links from original content BEFORE cleaning
-    // This prevents code span removal from breaking reference links
-    final referenceMatches = _referenceLinkPattern.allMatches(markdown);
+
+    // Remove HTML comments
+    String cleaned = markdown.replaceAll(_htmlCommentPattern, '');
+
+    // Remove fenced code blocks (``` ... ```)
+    cleaned = cleaned.replaceAll(RegExp(r'```[\s\S]*?```', multiLine: true), '');
+
+    // Remove indented code blocks (4 spaces or a tab at line start)
+    cleaned = cleaned.replaceAllMapped(
+      RegExp(r'^( {4,}|\t).*(\n|\r|$)', multiLine: true),
+      (match) => '',
+    );
+
+    // Remove inline code spans (`...`)
+    cleaned = cleaned.replaceAll(RegExp(r'`[^`]*?`'), '');
+
+    // Extract reference links from cleaned content
+    final referenceMatches = _referenceLinkPattern.allMatches(cleaned);
     for (final match in referenceMatches) {
-      // Normalize line breaks and multiple spaces in reference keys
       final reference = (match.group(2) ?? '').toLowerCase().trim()
           .replaceAll('\n', ' ').replaceAll(RegExp(r'\s+'), ' ');
       if (reference.isNotEmpty) {
@@ -96,9 +109,9 @@ class MarkdownLinkValidator {
         references.add(text);
       }
     }
-    
-    // Find link definitions: [ref]: url (always from original content)
-    final definitionMatches = _linkDefinitionPattern.allMatches(markdown);
+
+    // Find link definitions: [ref]: url (from cleaned content)
+    final definitionMatches = _linkDefinitionPattern.allMatches(cleaned);
     for (final match in definitionMatches) {
       final reference = match.group(1)!.toLowerCase().trim();
       final url = match.group(2)!.trim();
@@ -106,7 +119,7 @@ class MarkdownLinkValidator {
         definitions[reference] = url;
       }
     }
-    
+
     return ReferenceLinkInfo(references, definitions);
   }
   
