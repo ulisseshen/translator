@@ -28,7 +28,7 @@ class EnhancedParallelChunkProcessor {
     this.saveReceived = false,
   });
 
-  Future<ProcessingResult> processChunks(String filePath, List<String> chunks) async {
+  Future<ProcessingResult> processChunks(String filePath, List<SplittedChunk> chunks) async {
     _totalChunks = chunks.length;
     _completedChunks = 0;
     
@@ -36,7 +36,7 @@ class EnhancedParallelChunkProcessor {
     
     return ProcessingResult(
       filePath: filePath,
-      chunks: chunks,
+      chunks: chunks.map((c) => c.content).toList(),
       translatedChunks: translatedChunks,
       processingOrder: List.generate(chunks.length, (index) => index),
       chunkCompletionTimes: List.generate(chunks.length, (index) => DateTime.now()),
@@ -44,7 +44,7 @@ class EnhancedParallelChunkProcessor {
     );
   }
 
-  Future<List<String>> _processChunksWithProgress(String filePath, List<String> chunks) async {
+  Future<List<String>> _processChunksWithProgress(String filePath, List<SplittedChunk> chunks) async {
     final translatedChunks = List<String>.filled(chunks.length, '');
     final futures = <Future<void>>[];
     final semaphore = Semaphore(maxConcurrent);
@@ -52,20 +52,30 @@ class EnhancedParallelChunkProcessor {
     for (int i = 0; i < chunks.length; i++) {
       final future = semaphore.acquire().then((_) async {
         try {
+          final chunk = chunks[i];
+          
           // Save original chunk if --save-sent flag is used
           if (saveSent) {
             final sentFileName = filePath.replaceFirst('.md', '_sent${i + 1}.md');
-            await File(sentFileName).writeAsString(chunks[i]);
+            await File(sentFileName).writeAsString(chunk.content);
             print('📤 Original chunk ${i + 1} saved as: $sentFileName');
           }
           
-          final translatedContent = await translator.translate(
-            chunks[i],
-            onFirstModelError: () {
-              print('🚨 Erro ao traduzir parte ${i + 1} do arquivo: $fileName');
-            },
-            useSecond: true,
-          );
+          String translatedContent;
+          
+          // Only translate if chunk is translatable (not code blocks)
+          if (chunk.isTranslatable) {
+            translatedContent = await translator.translate(
+              chunk.content,
+              onFirstModelError: () {
+                print('🚨 Erro ao traduzir parte ${i + 1} do arquivo: $fileName');
+              },
+              useSecond: true,
+            );
+          } else {
+            // For non-translatable chunks (code blocks), keep original content
+            translatedContent = chunk.content;
+          }
 
           translatedChunks[i] = translatedContent;
           
@@ -82,7 +92,7 @@ class EnhancedParallelChunkProcessor {
           final remaining = _totalChunks - _completedChunks;
           print('✅ $fileName - parte ${i + 1}/$_totalChunks traduzida ($_completedChunks/$_totalChunks concluídas, $remaining restantes) 🔥⚡');
         } catch (e) {
-          translatedChunks[i] = chunks[i]; // Fallback to original content
+          translatedChunks[i] = chunks[i].content; // Fallback to original content
           _completedChunks++;
           
           final remaining = _totalChunks - _completedChunks;
