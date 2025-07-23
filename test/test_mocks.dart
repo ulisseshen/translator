@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:translator/translator.dart';
 import '../bin/src/app.dart';
 
@@ -131,7 +132,7 @@ class SimpleMockFileWrapper implements IFileWrapper {
   }
   
   @override
-  Future<int> length() async => 2048; // Force large file processing
+  Future<int> length() async => utf8.encode(content).length;
   
   @override
   Future<List<String>> readAsLines() async => content.split('\n');
@@ -142,12 +143,18 @@ class SimpleMockFileWrapper implements IFileWrapper {
 
 /// Mock translator that simulates preserving structure for chunk joining tests
 class StructurePreservingMockTranslator implements Translator {
+  int translationCallCount = 0;
+  String? lastTranslatedText;
+
   @override
   Future<String> translate(
     String content, {
     required Function onFirstModelError,
     bool useSecond = false,
   }) async {
+    translationCallCount++;
+    lastTranslatedText = content;
+    
     // Return content as-is but trim to simulate real AI behavior
     // This isolates the chunk joining bug from translation artifacts
     return content.trim();
