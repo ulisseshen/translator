@@ -7,6 +7,12 @@ enum ChunkType {
   mixed,       // Content with both text and code blocks
 }
 
+/// Simple strategy for splitting markdown content
+abstract class SplittingStrategy {
+  /// Try to split content. Returns null if this strategy can't handle it.
+  List<SplittedChunk>? trySplit(String content, int maxBytes);
+}
+
 
 class SplittedChunk {
   final String content;
@@ -37,127 +43,72 @@ class SplittedChunk {
   }
 }
 
-
-class MarkdownSplitter {
-  final int maxBytes;
-
-  MarkdownSplitter({this.maxBytes = 20480});
-
-  /// Divide o texto Markdown em partes respeitando os cabeçalhos ### e ##.
-  /// Retorna uma lista de SplittedChunk com conteúdo e tamanhos.
-  List<SplittedChunk> splitMarkdown(String content) {
+/// Strategy for splitting by headers (## to ####)
+class HeaderStrategy extends SplittingStrategy {
+  @override
+  List<SplittedChunk>? trySplit(String content, int maxBytes) {
+    if (!RegExp(r'^#{2,4} ', multiLine: true).hasMatch(content)) return null;
+    
+    final sections = content.split(RegExp(r'(?=^#{2,4} )', multiLine: true));
     final List<SplittedChunk> result = [];
     
-    // First, split by ## to #### sections
-    final List<String> primarySections =
-        content.split(RegExp(r'(?=^#{2,4} )', multiLine: true));
-
-    for (final section in primarySections) {
-      final sectionSize = utf8.encode(section).length;
-
-      if (sectionSize > maxBytes) {
-        // Section is oversized - try to split it further
-        final splitSections = _splitOversizedSection(section);
-        result.addAll(splitSections);
-      } else {
-        // Section fits - create chunk with proper type
-        final chunkType = _determineChunkType(section);
-        result.add(SplittedChunk(
-          content: section,
-          utf8ByteSize: sectionSize,
-          codeUnitsSize: section.codeUnits.length,
-          type: chunkType,
-        ));
-      }
-    }
-    
-    return _combineSmallChunks(result);
-  }
-
-  /// Splits oversized sections by ## headers when possible
-  List<SplittedChunk> _splitOversizedSection(String section) {
-    final List<SplittedChunk> result = [];
-    
-    // If this starts with ###, it's a single section - try to separate code blocks
-    if (section.trim().startsWith('###')) {
-      final separatedChunks = _separateCodeBlocks(section);
-      return separatedChunks;
-    }
-    
-    // This is pre-section content - try splitting by ## headers
-    final List<String> subSections = section.split(RegExp(r'(?=^## )', multiLine: true));
-    
-    for (final subSection in subSections) {
-      final subSectionSize = utf8.encode(subSection).length;
-      
-      if (subSectionSize > maxBytes) {
-        // Even ## subsection is too large - try to separate code blocks
-        final separatedChunks = _separateCodeBlocks(subSection);
-        result.addAll(separatedChunks);
-      } else {
-        // Subsection fits within limit - determine its type
-        final chunkType = _determineChunkType(subSection);
-        result.add(SplittedChunk(
-          content: subSection,
-          utf8ByteSize: subSectionSize,
-          codeUnitsSize: subSection.codeUnits.length,
-          type: chunkType,
-        ));
-      }
+    for (final section in sections) {
+      final size = utf8.encode(section).length;
+      result.add(SplittedChunk(
+        content: section,
+        utf8ByteSize: size,
+        codeUnitsSize: section.codeUnits.length,
+        type: _determineType(section),
+      ));
     }
     
     return result;
   }
-
-  /// Separates code blocks from text content for oversized sections
-  List<SplittedChunk> _separateCodeBlocks(String section) {
-    final List<SplittedChunk> result = [];
-    final codeBlocks = RegExp(r'```[\s\S]*?```').allMatches(section);
+  
+  ChunkType _determineType(String content) {
+    final codeBlocks = RegExp(r'```[\s\S]*?```').allMatches(content);
+    final totalCodeSize = codeBlocks.fold(0, (sum, match) => sum + utf8.encode(match.group(0)!).length);
+    final totalSize = utf8.encode(content).length;
     
-    if (codeBlocks.isEmpty) {
-      // No code blocks - try splitting by paragraphs if oversized
-      final sectionSize = utf8.encode(section).length;
-      if (sectionSize > maxBytes) {
-        return _splitByParagraphs(section);
-      } else {
-        result.add(SplittedChunk(
-          content: section,
-          utf8ByteSize: sectionSize,
-          codeUnitsSize: section.codeUnits.length,
-          type: ChunkType.text,
-        ));
-        return result;
-      }
+    if (totalCodeSize == 0) {
+      return ChunkType.text;
+    } else if (totalCodeSize >= totalSize * 0.95) {
+      return ChunkType.codeBlock;
+    } else {
+      return ChunkType.mixed;
     }
+  }
+}
+
+/// Strategy for separating code blocks from text
+class CodeBlockStrategy extends SplittingStrategy {
+  @override
+  List<SplittedChunk>? trySplit(String content, int maxBytes) {
+    final codeBlocks = RegExp(r'```[\s\S]*?```').allMatches(content);
+    if (codeBlocks.isEmpty) return null;
     
+    final List<SplittedChunk> result = [];
     int lastEnd = 0;
     
     for (final codeBlock in codeBlocks) {
-      // Add text content before this code block
+      // Add text before code block
       if (codeBlock.start > lastEnd) {
-        final textPart = section.substring(lastEnd, codeBlock.start);
+        final textPart = content.substring(lastEnd, codeBlock.start);
         if (textPart.trim().isNotEmpty) {
-          final textSize = utf8.encode(textPart).length;
-          if (textSize > maxBytes) {
-            // Text part is oversized - split by paragraphs
-            result.addAll(_splitByParagraphs(textPart));
-          } else {
-            result.add(SplittedChunk(
-              content: textPart,
-              utf8ByteSize: textSize,
-              codeUnitsSize: textPart.codeUnits.length,
-              type: ChunkType.text,
-            ));
-          }
+          result.add(SplittedChunk(
+            content: textPart,
+            utf8ByteSize: utf8.encode(textPart).length,
+            codeUnitsSize: textPart.codeUnits.length,
+            type: ChunkType.text,
+          ));
         }
       }
       
-      // Add the code block separately
+      // Add code block
       final codeContent = codeBlock.group(0)!;
-      final codeSize = utf8.encode(codeContent).length;
       result.add(SplittedChunk(
         content: codeContent,
-        utf8ByteSize: codeSize,
+        utf8ByteSize: utf8.encode(codeContent).length,
         codeUnitsSize: codeContent.codeUnits.length,
         type: ChunkType.codeBlock,
       ));
@@ -165,95 +116,146 @@ class MarkdownSplitter {
       lastEnd = codeBlock.end;
     }
     
-    // Add remaining text after last code block
-    if (lastEnd < section.length) {
-      final remainingText = section.substring(lastEnd);
+    // Add remaining text
+    if (lastEnd < content.length) {
+      final remainingText = content.substring(lastEnd);
       if (remainingText.trim().isNotEmpty) {
-        final remainingSize = utf8.encode(remainingText).length;
-        if (remainingSize > maxBytes) {
-          // Remaining text is oversized - split by paragraphs
-          result.addAll(_splitByParagraphs(remainingText));
-        } else {
-          result.add(SplittedChunk(
-            content: remainingText,
-            utf8ByteSize: remainingSize,
-            codeUnitsSize: remainingText.codeUnits.length,
-            type: ChunkType.text,
-          ));
-        }
+        result.add(SplittedChunk(
+          content: remainingText,
+          utf8ByteSize: utf8.encode(remainingText).length,
+          codeUnitsSize: remainingText.codeUnits.length,
+          type: ChunkType.text,
+        ));
       }
     }
     
     return result;
   }
+}
 
-  /// Splits content by double line breaks (\n\n) as a fallback for oversized sections
-  List<SplittedChunk> _splitByParagraphs(String content) {
-    final List<SplittedChunk> result = [];
-    final paragraphs = content.split('\n\n');
+/// Strategy for splitting by paragraphs (double line breaks)
+class ParagraphStrategy extends SplittingStrategy {
+  @override
+  List<SplittedChunk>? trySplit(String content, int maxBytes) {
+    if (!content.contains('\n\n')) return null;
     
-    String currentParagraphGroup = '';
+    final paragraphs = content.split('\n\n');
+    final List<SplittedChunk> result = [];
+    String currentGroup = '';
     int currentSize = 0;
     
     for (int i = 0; i < paragraphs.length; i++) {
       final paragraph = i == 0 ? paragraphs[i] : '\n\n${paragraphs[i]}';
       final paragraphSize = utf8.encode(paragraph).length;
       
-      // If this single paragraph is larger than maxBytes, we need to add it anyway
-      // to prevent infinite splitting, but as a separate chunk
       if (paragraphSize > maxBytes) {
-        // Save current accumulated paragraphs if any
-        if (currentParagraphGroup.isNotEmpty) {
-          result.add(SplittedChunk(
-            content: currentParagraphGroup,
-            utf8ByteSize: currentSize,
-            codeUnitsSize: currentParagraphGroup.codeUnits.length,
-            type: ChunkType.text,
-          ));
-          currentParagraphGroup = '';
+        // Save current group
+        if (currentGroup.isNotEmpty) {
+          result.add(_createChunk(currentGroup, currentSize));
+          currentGroup = '';
           currentSize = 0;
         }
-        
-        // Add the oversized paragraph as its own chunk
-        result.add(SplittedChunk(
-          content: paragraph,
-          utf8ByteSize: paragraphSize,
-          codeUnitsSize: paragraph.codeUnits.length,
-          type: ChunkType.text,
-        ));
+        // Add oversized paragraph as-is
+        result.add(_createChunk(paragraph, paragraphSize));
       } else if (currentSize + paragraphSize <= maxBytes) {
-        // Can fit this paragraph in current group
-        currentParagraphGroup += paragraph;
+        currentGroup += paragraph;
         currentSize += paragraphSize;
       } else {
-        // Current group is full, save it and start new group
-        if (currentParagraphGroup.isNotEmpty) {
-          result.add(SplittedChunk(
-            content: currentParagraphGroup,
-            utf8ByteSize: currentSize,
-            codeUnitsSize: currentParagraphGroup.codeUnits.length,
-            type: ChunkType.text,
-          ));
+        // Save current and start new
+        if (currentGroup.isNotEmpty) {
+          result.add(_createChunk(currentGroup, currentSize));
         }
-        
-        // Start new group with current paragraph
-        currentParagraphGroup = paragraph;
+        currentGroup = paragraph;
         currentSize = paragraphSize;
       }
     }
     
-    // Add final accumulated paragraphs
-    if (currentParagraphGroup.isNotEmpty) {
-      result.add(SplittedChunk(
-        content: currentParagraphGroup,
-        utf8ByteSize: currentSize,
-        codeUnitsSize: currentParagraphGroup.codeUnits.length,
-        type: ChunkType.text,
-      ));
+    // Add final group
+    if (currentGroup.isNotEmpty) {
+      result.add(_createChunk(currentGroup, currentSize));
     }
     
     return result;
   }
+  
+  SplittedChunk _createChunk(String content, int size) {
+    return SplittedChunk(
+      content: content,
+      utf8ByteSize: size,
+      codeUnitsSize: content.codeUnits.length,
+      type: ChunkType.text,
+    );
+  }
+}
+
+
+class MarkdownSplitter {
+  final int maxBytes;
+  final List<SplittingStrategy> _strategies;
+
+  MarkdownSplitter({this.maxBytes = 20480})
+      : _strategies = [
+          HeaderStrategy(),
+          CodeBlockStrategy(),
+          ParagraphStrategy(),
+        ];
+
+  /// Divide o texto Markdown em partes respeitando os cabeçalhos ### e ##.
+  /// Retorna uma lista de SplittedChunk com conteúdo e tamanhos.
+  List<SplittedChunk> splitMarkdown(String content) {
+    final chunks = _splitContent(content);
+    return _combineSmallChunks(chunks);
+  }
+
+  /// Try each strategy in order, handling oversized chunks recursively
+  List<SplittedChunk> _splitContent(String content, [int depth = 0]) {
+    const maxDepth = 5;
+    if (depth >= maxDepth) {
+      // Max recursion depth reached, return as-is
+      return [SplittedChunk(
+        content: content,
+        utf8ByteSize: utf8.encode(content).length,
+        codeUnitsSize: content.codeUnits.length,
+        type: ChunkType.text,
+      )];
+    }
+    
+    for (int i = 0; i < _strategies.length; i++) {
+      final strategy = _strategies[i];
+      final result = strategy.trySplit(content, maxBytes);
+      if (result != null) {
+        // Strategy worked, but check for oversized chunks
+        final List<SplittedChunk> finalResult = [];
+        for (final chunk in result) {
+          if (chunk.utf8ByteSize > maxBytes) {
+            // Chunk is still too big, try remaining strategies only
+            final remainingStrategies = _strategies.skip(i + 1).toList();
+            if (remainingStrategies.isNotEmpty) {
+              final subSplitter = MarkdownSplitter(maxBytes: maxBytes);
+              subSplitter._strategies.clear();
+              subSplitter._strategies.addAll(remainingStrategies);
+              finalResult.addAll(subSplitter._splitContent(chunk.content, depth + 1));
+            } else {
+              // No more strategies, accept the oversized chunk
+              finalResult.add(chunk);
+            }
+          } else {
+            finalResult.add(chunk);
+          }
+        }
+        return finalResult;
+      }
+    }
+    
+    // No strategy worked, return as single chunk
+    return [SplittedChunk(
+      content: content,
+      utf8ByteSize: utf8.encode(content).length,
+      codeUnitsSize: content.codeUnits.length,
+      type: ChunkType.text,
+    )];
+  }
+
 
 
   /// Combines small adjacent chunks to optimize size usage
@@ -273,12 +275,11 @@ class MarkdownSplitter {
       } else {
         // Save current accumulated content if any
         if (currentContent.isNotEmpty) {
-          final combinedType = _determineChunkType(currentContent);
           result.add(SplittedChunk(
             content: currentContent,
             utf8ByteSize: currentSize,
             codeUnitsSize: currentContent.codeUnits.length,
-            type: combinedType,
+            type: ChunkType.mixed, // Combined chunks are mixed by nature
           ));
         }
         
@@ -290,33 +291,17 @@ class MarkdownSplitter {
     
     // Add final accumulated content
     if (currentContent.isNotEmpty) {
-      final finalType = _determineChunkType(currentContent);
       result.add(SplittedChunk(
         content: currentContent,
         utf8ByteSize: currentSize,
         codeUnitsSize: currentContent.codeUnits.length,
-        type: finalType,
+        type: ChunkType.mixed, // Combined chunks are mixed by nature
       ));
     }
     
     return result;
   }
 
-  /// Determines the type of content in a chunk
-  ChunkType _determineChunkType(String content) {
-    final codeBlocks = RegExp(r'```[\s\S]*?```').allMatches(content);
-    final totalCodeSize = codeBlocks.fold(0, (sum, match) => sum + utf8.encode(match.group(0)!).length);
-    final totalSize = utf8.encode(content).length;
-    
-    if (totalCodeSize == 0) {
-      return ChunkType.text;
-    } else if (totalCodeSize >= totalSize * 0.95) {
-      // If >95% is code, consider it a code block
-      return ChunkType.codeBlock;
-    } else {
-      return ChunkType.mixed;
-    }
-  }
 
   String getEnterily(List<SplittedChunk> chunks) {
     return chunks.map((chunk) => chunk.content).join();
