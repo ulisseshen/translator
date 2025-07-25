@@ -18,6 +18,7 @@ class AppArguments {
   final bool? multiFiles;
   final List<String>? multipleFilePaths;
   final int maxConcurrentChunks;
+  final int maxConcurrentFiles;
 
   AppArguments._({
     required this.showHelp,
@@ -37,6 +38,7 @@ class AppArguments {
     this.filePath,
     this.multipleFilePaths,
     this.maxConcurrentChunks = 10, // LargeFileConfig.defaultMaxConcurrentChunks
+    this.maxConcurrentFiles = 3, // LargeFileConfig.defaultMaxConcurrentFiles
   });
 
   factory AppArguments.parse(List<String> arguments) {
@@ -104,6 +106,12 @@ class AppArguments {
     if (concurrentIndex != -1 && concurrentIndex + 1 < arguments.length) {
       maxConcurrentChunks = int.tryParse(arguments[concurrentIndex + 1]) ?? LargeFileConfig.defaultMaxConcurrentChunks;
     }
+    
+    int maxConcurrentFiles = LargeFileConfig.defaultMaxConcurrentFiles;
+    final filesConcurrentIndex = arguments.indexOf('--files-concurrent');
+    if (filesConcurrentIndex != -1 && filesConcurrentIndex + 1 < arguments.length) {
+      maxConcurrentFiles = int.tryParse(arguments[filesConcurrentIndex + 1]) ?? LargeFileConfig.defaultMaxConcurrentFiles;
+    }
 
     // Configure chunk size globally if specified
     final chunkSizeIndex = arguments.indexOf('--chunk-size');
@@ -130,6 +138,7 @@ class AppArguments {
       multiFiles: multiFiles,
       multipleFilePaths: multiPaths,
       maxConcurrentChunks: maxConcurrentChunks,
+      maxConcurrentFiles: maxConcurrentFiles,
     );
   }
 
@@ -143,6 +152,7 @@ class AppArguments {
     print('-cl                   Collect links');
     print('--info                Show directory info');
     print('--concurrent <n>      Max concurrent chunk translations (default: ${LargeFileConfig.defaultMaxConcurrentChunks})');
+    print('--files-concurrent <n> Max concurrent file translations (default: ${LargeFileConfig.defaultMaxConcurrentFiles})');
     print('--chunk-size <bytes>  Max chunk size in bytes (default: ${LargeFileConfig.defaultChunkMaxBytes})');
     print('-c                  Clean Markdown files');
     print('-l                  Replace links');
