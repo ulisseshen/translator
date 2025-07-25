@@ -148,7 +148,7 @@ class FileProcessorImpl implements FileProcessor {
     this.translator, 
     this.markdownProcessor, {
     this.maxConcurrentChunks = 10, // LargeFileConfig.defaultMaxConcurrentChunks
-    this.maxConcurrentFiles = 3, // LargeFileConfig.defaultMaxConcurrentFiles
+    this.maxConcurrentFiles = 3, // Keep for backward compatibility but not used in intelligent scheduling
   });
 
 
@@ -350,18 +350,31 @@ class FileProcessorImpl implements FileProcessor {
   }) async {
     int completedCount = 0;
     int failedCount = 0;
-    final batchSize = maxConcurrentFiles; // Use configurable file concurrency limit
 
-    print('🚀 Starting parallel translation of ${filesToTranslate.length} files with max $maxConcurrentFiles concurrent files...');
+    print('🚀 Starting intelligent file scheduling for ${filesToTranslate.length} files...');
+    print('📊 Chunk limit: $maxConcurrentChunks (only limit needed for intelligent scheduling)');
 
-    for (var i = 0; i < filesToTranslate.length; i += batchSize) {
-      final batch = filesToTranslate.skip(i).take(batchSize).toList();
+    // STEP 1: Estimate chunks per file to enable intelligent scheduling
+    final fileEstimates = await _estimateChunksPerFile(filesToTranslate, processLargeFiles);
+    
+    // STEP 2: Create intelligent batches to prevent chunk overflow (only chunk limit matters)
+    final batches = _createIntelligentBatches(fileEstimates, maxConcurrentChunks);
+    
+    print('🧠 Intelligent scheduling created ${batches.length} batches to respect chunk limit');
+
+    // STEP 3: Process batches sequentially (files within each batch are parallel)
+    for (int batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      final batch = batches[batchIndex];
       final stopwatchBatch = Stopwatch()..start();
+      
+      final batchChunkEstimate = batch.fold<int>(0, (sum, file) => sum + file['estimatedChunks'] as int);
+      print('🔄 Processing batch ${batchIndex + 1}/${batches.length}: ${batch.length} files (~$batchChunkEstimate chunks)');
 
       try {
-        // Process files in parallel without artificial delays
+        // Process files in this batch concurrently
         await Future.wait(
-          batch.map((file) async {
+          batch.map((fileInfo) async {
+            final file = fileInfo['file'] as IFileWrapper;
             final stopwatchFile = Stopwatch()..start();
             try {
               await FileProcessorImpl(
@@ -388,7 +401,6 @@ class FileProcessorImpl implements FileProcessor {
                   stopwatchFile.stop();
                 },
               );
-              // fileCount removed - we use completedCount and failedCount instead
             } catch (e) {
               final currentFailedIndex = ++failedCount;
               print('❌ File translation failed ($currentFailedIndex failed of ${filesToTranslate.length}): ${Utils.getFileName(file)}, em ${stopwatchFile.elapsedMilliseconds}ms - Error: $e');
@@ -397,7 +409,7 @@ class FileProcessorImpl implements FileProcessor {
           })
         );
 
-        print('🎯 Batch ${(i ~/ batchSize) + 1} processed in ${stopwatchBatch.elapsedMilliseconds}ms');
+        print('🎯 Batch ${batchIndex + 1} completed in ${stopwatchBatch.elapsedMilliseconds}ms');
       } catch (e) {
         print('❌❌❌ Error in batch processing: ❌❌❌ $e');
       } finally {
@@ -405,6 +417,93 @@ class FileProcessorImpl implements FileProcessor {
       }
     }
 
+    print('🏁 Intelligent file scheduling completed: $completedCount success, $failedCount failed');
     return TranslationResult(completedCount, failedCount);
+  }
+
+  /// Estimates the number of chunks each file will generate
+  Future<List<Map<String, dynamic>>> _estimateChunksPerFile(
+    List<IFileWrapper> files, 
+    bool processLargeFiles
+  ) async {
+    final estimates = <Map<String, dynamic>>[];
+    
+    for (final file in files) {
+      final fileSizeBytes = await file.length();
+      final fileSizeKB = fileSizeBytes / 1024;
+      
+      int estimatedChunks;
+      if (processLargeFiles && fileSizeKB > LargeFileConfig.maxKbSize) {
+        // Large file: estimate based on chunk size
+        estimatedChunks = (fileSizeBytes / LargeFileConfig.defaultChunkMaxBytes).ceil().clamp(1, maxConcurrentChunks);
+      } else {
+        // Small file: single chunk
+        estimatedChunks = 1;
+      }
+      
+      estimates.add({
+        'file': file,
+        'sizeKB': fileSizeKB,
+        'estimatedChunks': estimatedChunks,
+        'fileName': Utils.getFileName(file),
+      });
+    }
+    
+    // Sort by estimated chunks (largest first) for better packing
+    estimates.sort((a, b) => (b['estimatedChunks'] as int).compareTo(a['estimatedChunks'] as int));
+    
+    print('📋 File chunk estimates:');
+    for (final estimate in estimates.take(5)) { // Show first 5 for brevity
+      print('   ${estimate['fileName']}: ~${estimate['estimatedChunks']} chunks (${(estimate['sizeKB'] as double).toStringAsFixed(1)}KB)');
+    }
+    if (estimates.length > 5) {
+      print('   ... and ${estimates.length - 5} more files');
+    }
+    
+    return estimates;
+  }
+
+  /// Creates intelligent batches that respect only the chunk limit (simpler and more efficient)
+  List<List<Map<String, dynamic>>> _createIntelligentBatches(
+    List<Map<String, dynamic>> fileEstimates,
+    int chunkLimit
+  ) {
+    final batches = <List<Map<String, dynamic>>>[];
+    final remainingFiles = List<Map<String, dynamic>>.from(fileEstimates);
+    
+    while (remainingFiles.isNotEmpty) {
+      final currentBatch = <Map<String, dynamic>>[];
+      int currentBatchChunks = 0;
+      
+      // Greedy algorithm: fit as many files as possible without exceeding chunk limit
+      remainingFiles.removeWhere((file) {
+        final fileChunks = file['estimatedChunks'] as int;
+        
+        // Only check chunk limit - no artificial file limit needed
+        if (currentBatchChunks + fileChunks <= chunkLimit) {
+          currentBatch.add(file);
+          currentBatchChunks += fileChunks;
+          return true; // Remove from remaining files
+        }
+        return false; // Keep in remaining files
+      });
+      
+      // Safety: if no files fit, force the largest remaining file into its own batch
+      if (currentBatch.isEmpty && remainingFiles.isNotEmpty) {
+        final largestFile = remainingFiles.reduce((a, b) => 
+          (a['estimatedChunks'] as int) > (b['estimatedChunks'] as int) ? a : b);
+        currentBatch.add(largestFile);
+        remainingFiles.remove(largestFile);
+        currentBatchChunks = largestFile['estimatedChunks'] as int;
+        print('⚠️  Large file ${largestFile['fileName']} (~${largestFile['estimatedChunks']} chunks) requires its own batch');
+      }
+      
+      if (currentBatch.isNotEmpty) {
+        batches.add(currentBatch);
+        print('📦 Batch ${batches.length}: ${currentBatch.length} files, ~$currentBatchChunks chunks ≤ $chunkLimit');
+      }
+    }
+    
+    return batches;
   }
 }
