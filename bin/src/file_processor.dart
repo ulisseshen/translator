@@ -142,11 +142,13 @@ class FileProcessorImpl implements FileProcessor {
   final Translator translator;
   final MarkdownProcessor markdownProcessor;
   final int maxConcurrentChunks;
+  final int maxConcurrentFiles;
 
   FileProcessorImpl(
     this.translator, 
     this.markdownProcessor, {
     this.maxConcurrentChunks = 10, // LargeFileConfig.defaultMaxConcurrentChunks
+    this.maxConcurrentFiles = 3, // LargeFileConfig.defaultMaxConcurrentFiles
   });
 
 
@@ -348,9 +350,9 @@ class FileProcessorImpl implements FileProcessor {
   }) async {
     int completedCount = 0;
     int failedCount = 0;
-    const batchSize = LargeFileConfig.defaultBatchSize; // Reduced batch size for better parallel processing
+    final batchSize = maxConcurrentFiles; // Use configurable file concurrency limit
 
-    print('🚀 Starting parallel translation of ${filesToTranslate.length} files...');
+    print('🚀 Starting parallel translation of ${filesToTranslate.length} files with max $maxConcurrentFiles concurrent files...');
 
     for (var i = 0; i < filesToTranslate.length; i += batchSize) {
       final batch = filesToTranslate.skip(i).take(batchSize).toList();
