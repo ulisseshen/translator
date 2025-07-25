@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import '../../lib/code_block_translation_pipeline.dart';
+import 'package:translator/code_block_translation_pipeline.dart';
 
 void main() {
   group('CodeBlockTranslationPipeline', () {

@@ -314,34 +314,30 @@ void main() {
           // Medium files (might be chunked)
           MockIFileWrapper(
               'medium1.md',
-              'ia-translate: true\n\n' +
-                  List.generate(
+              'ia-translate: true\n\n${List.generate(
                           15, (i) => 'File 2 medium line $i with more content')
-                      .join('\n'),
+                      .join('\n')}',
               8.0),
           MockIFileWrapper(
               'medium2.md',
-              'ia-translate: true\n\n' +
-                  List.generate(12, (i) => 'File 3 medium line $i with content')
-                      .join('\n'),
+              'ia-translate: true\n\n${List.generate(12, (i) => 'File 3 medium line $i with content')
+                      .join('\n')}',
               6.5),
 
           // Large files (will definitely be chunked if processLargeFiles=true)
           MockIFileWrapper(
               'large1.md',
-              'ia-translate: true\n\n' +
-                  List.generate(
+              'ia-translate: true\n\n${List.generate(
                           40,
                           (i) =>
                               'File 4 large line $i with substantial content for testing')
-                      .join('\n'),
+                      .join('\n')}',
               25.0),
           MockIFileWrapper(
               'large2.md',
-              'ia-translate: true\n\n' +
-                  List.generate(35,
+              'ia-translate: true\n\n${List.generate(35,
                           (i) => 'File 5 large line $i with extensive content')
-                      .join('\n'),
+                      .join('\n')}',
               22.0),
         ];
 
@@ -569,9 +565,9 @@ void main() {
         // This test demonstrates what the improvement achieves
         final files = List.generate(4, (i) => 
           MockIFileWrapper('test$i.md', 
-            'ia-translate: true\n\n' + List.generate(20, (j) => 
+            'ia-translate: true\n\n${List.generate(20, (j) => 
               'File $i line $j with Hello World content for translation'
-            ).join('\n'), 
+            ).join('\n')}', 
             18.0) // Each file ~18KB, will generate multiple chunks
         );
 
@@ -627,12 +623,11 @@ void main() {
             6,
             (i) => MockIFileWrapper(
                   'doc_$i.md',
-                  'ia-translate: true\n\n# Documentation File $i\n\n' +
-                      List.generate(
+                  'ia-translate: true\n\n# Documentation File $i\n\n${List.generate(
                               10,
                               (j) =>
                                   'File $i section $j with documentation content.')
-                          .join('\n\n'),
+                          .join('\n\n')}',
                   4.0, // 4KB each - realistic doc size
                 ));
 
@@ -670,7 +665,7 @@ void main() {
 
 /// Error-injecting translator for testing error handling in batch processing
 class _ErrorInjectingBatchTranslator extends BatchTrackingTranslator {
-  _ErrorInjectingBatchTranslator({int delayMs = 50}) : super(delayMs: delayMs);
+  _ErrorInjectingBatchTranslator({super.delayMs});
 
   @override
   Future<String> translate(String content,

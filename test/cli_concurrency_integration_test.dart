@@ -1,9 +1,8 @@
 import 'package:test/test.dart';
 import 'dart:async';
 import 'dart:math';
-import '../lib/code_block_translation_pipeline.dart';
-import '../lib/enhanced_parallel_chunk_processor_adapter.dart';
-import '../lib/translator.dart';
+import 'package:translator/enhanced_parallel_chunk_processor_adapter.dart';
+import 'package:translator/translator.dart';
 
 /// Mock translator that simulates realistic translation delays
 /// and tracks concurrency at different levels

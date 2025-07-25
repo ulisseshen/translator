@@ -89,7 +89,7 @@ after: [visão geral do Dart][Dart overview]
 
 **Instruções para o cruzamento:**  
 1. Compare semanticamente as references com os links para poder fazer o cruzamento corretamente. 
-2. Preserve qualquer formatação especial, como crases (\`), itálico ou negrito.  
+2. Preserve qualquer formatação especial, como crases (`), itálico ou negrito.  
 3. Inclua no resultado apenas as correspondências encontradas.  
 4. Os textos que não tiverem correspondência devem ser ignorados.  
 

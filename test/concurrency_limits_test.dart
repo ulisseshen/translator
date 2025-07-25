@@ -1,8 +1,7 @@
 import 'package:test/test.dart';
 import 'dart:async';
 import 'dart:math';
-import '../lib/code_block_translation_pipeline.dart';
-import '../lib/enhanced_parallel_chunk_processor_adapter.dart';
+import 'package:translator/code_block_translation_pipeline.dart';
 
 /// Mock translator that tracks concurrency and simulates translation delay
 class ConcurrencyTrackingTranslator {
@@ -181,7 +180,7 @@ void main() {
         mockTranslator.reset();
         
         int errorCount = 0;
-        final errorTranslator = (String content) async {
+        errorTranslator(String content) async {
           mockTranslator._currentConcurrentTranslations++;
           mockTranslator._maxConcurrentTranslations = max(mockTranslator._maxConcurrentTranslations, mockTranslator._currentConcurrentTranslations);
           
@@ -198,7 +197,7 @@ void main() {
           } finally {
             mockTranslator._currentConcurrentTranslations--;
           }
-        };
+        }
         
         final contentWithErrors = [
           'Normal line 1',

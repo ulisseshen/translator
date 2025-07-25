@@ -114,7 +114,7 @@ class MarkdownStructureValidator {
       final originalStructure = countHeaders(original);
       final translatedStructure = countHeaders(translated);
       issues.add(
-          'Header mismatch: ${originalStructure} vs ${translatedStructure} header elements');
+          'Header mismatch: $originalStructure vs $translatedStructure header elements');
     }
 
     if (!linkValidation.isValid) {

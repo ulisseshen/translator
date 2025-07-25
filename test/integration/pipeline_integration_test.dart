@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
-import '../../lib/code_block_translation_pipeline.dart';
-import '../../lib/enhanced_parallel_chunk_processor_adapter.dart';
+import 'package:translator/code_block_translation_pipeline.dart';
 
 void main() {
   group('Pipeline Integration Tests', () {

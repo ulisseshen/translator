@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:test/test.dart';
 import '../bin/src/app.dart';
 import '../bin/src/large_file_config.dart';
-import '../lib/markdown_spliter.dart';
+import 'package:translator/markdown_spliter.dart';
 import 'test_mocks.dart';
 
 void main() {

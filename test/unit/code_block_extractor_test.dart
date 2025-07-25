@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import '../../lib/code_block_extractor.dart';
+import 'package:translator/code_block_extractor.dart';
 
 void main() {
   group('CodeBlockExtractor', () {

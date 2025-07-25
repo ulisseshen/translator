@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
 
-import '../lib/align_text.dart';
+import 'package:translator/align_text.dart';
 
 void main(){
   test('AlignText deve parsear texto normais e deixar a mensa quantidade de linhas do texto original', () async {

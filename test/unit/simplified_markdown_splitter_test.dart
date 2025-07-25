@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import '../../lib/simplified_markdown_splitter.dart';
-import '../../lib/simplified_chunk.dart';
+import 'package:translator/simplified_markdown_splitter.dart';
+import 'package:translator/simplified_chunk.dart';
 
 void main() {
   group('SimplifiedMarkdownSplitter', () {

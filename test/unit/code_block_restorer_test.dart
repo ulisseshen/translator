@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import '../../lib/code_block_extractor.dart';
-import '../../lib/code_block_restorer.dart';
+import 'package:translator/code_block_extractor.dart';
+import 'package:translator/code_block_restorer.dart';
 
 void main() {
   group('CodeBlockRestorer', () {

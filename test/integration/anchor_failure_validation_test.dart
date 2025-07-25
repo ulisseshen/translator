@@ -1,7 +1,7 @@
 import 'package:test/test.dart';
 import 'dart:io';
-import '../../lib/translator.dart';
-import '../../lib/enhanced_parallel_chunk_processor_adapter.dart';
+import 'package:translator/translator.dart';
+import 'package:translator/enhanced_parallel_chunk_processor_adapter.dart';
 
 /// Test double that intentionally breaks anchor restoration by modifying anchor patterns
 class MaliciousAnchorBreakingTranslator extends Translator {

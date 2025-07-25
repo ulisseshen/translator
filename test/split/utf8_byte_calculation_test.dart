@@ -55,7 +55,7 @@ void main() {
             }
             
             if (totalCodeSize > chunkSize * 0.8) { // If >80% is code
-              print('  ℹ️  Large code block content (${totalCodeSize} bytes code) - cannot split code');
+              print('  ℹ️  Large code block content ($totalCodeSize bytes code) - cannot split code');
             } else {
               print('  ℹ️  Pre-section content only - could potentially be split further');
             }

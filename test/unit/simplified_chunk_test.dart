@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import '../../lib/simplified_chunk.dart';
+import 'package:translator/simplified_chunk.dart';
 
 void main() {
   group('SimplifiedChunk', () {
