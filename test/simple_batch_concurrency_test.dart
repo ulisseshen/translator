@@ -64,9 +64,10 @@ void main() {
       expect(result.failureCount, equals(0), 
           reason: 'No files should fail in normal operation');
       
-      // Critical ATDD assertion: Concurrency limit must be respected
-      expect(maxConcurrent, lessThanOrEqualTo(maxConcurrentFiles),
-          reason: 'FileProcessor MUST respect maxConcurrentFiles=$maxConcurrentFiles limit');
+      // Critical ATDD assertion: Chunk concurrency limit must be respected
+      const maxConcurrentChunks = 5; // From FileProcessor configuration
+      expect(maxConcurrent, lessThanOrEqualTo(maxConcurrentChunks),
+          reason: 'FileProcessor MUST respect maxConcurrentChunks=$maxConcurrentChunks limit through intelligent batching');
       expect(maxConcurrent, greaterThan(1),
           reason: 'Should actually use parallel processing for efficiency');
           
@@ -76,10 +77,10 @@ void main() {
       
       print('   📊 ATDD Results:');
       print('   - Files processed: ${result.successCount}/${testFiles.length}');
-      print('   - Max concurrent files observed: $maxConcurrent (limit: $maxConcurrentFiles)');
+      print('   - Max concurrent files observed: $maxConcurrent (chunk limit: $maxConcurrentChunks)');
       print('   - Total processing time: ${stopwatch.elapsedMilliseconds}ms');
       print('   - Process order: ${processOrder.take(6).join(', ')}...');
-      print('   ✅ ATDD PASSED: Batch concurrency correctly enforced');
+      print('   ✅ ATDD PASSED: Intelligent chunk-based batching correctly enforced');
     });
     
     test('should demonstrate batch processing performance with different limits', () async {
@@ -94,8 +95,8 @@ void main() {
         TestFileWrapper('perf6.md', 'ia-translate: true\n\nPerformance test file 6'),
       ];
       
-      // Test 1: Sequential processing (limit = 1)
-      print('\\n   Testing sequential processing (maxConcurrentFiles=1)');
+      // Test 1: Sequential processing (chunk limit = 1)
+      print('\\n   Testing sequential processing (maxConcurrentChunks=1)');
       int maxConcurrent1 = 0;
       int currentConcurrent1 = 0;
       
@@ -106,15 +107,15 @@ void main() {
           onTranslateEnd: (_) => currentConcurrent1--,
         ),
         TestMarkdownProcessor(),
-        maxConcurrentFiles: 1,
+        maxConcurrentChunks: 1, // Only 1 chunk at a time
       );
       
       final stopwatch1 = Stopwatch()..start();
       final result1 = await sequential.translateFiles(testFiles, false);
       stopwatch1.stop();
       
-      // Test 2: Parallel processing (limit = 3)
-      print('   Testing parallel processing (maxConcurrentFiles=3)');
+      // Test 2: Parallel processing (chunk limit = 3)
+      print('   Testing parallel processing (maxConcurrentChunks=3)');
       int maxConcurrent3 = 0;
       int currentConcurrent3 = 0;
       
@@ -125,7 +126,7 @@ void main() {
           onTranslateEnd: (_) => currentConcurrent3--,
         ),
         TestMarkdownProcessor(),
-        maxConcurrentFiles: 3,
+        maxConcurrentChunks: 3, // 3 chunks at a time
       );
       
       final stopwatch3 = Stopwatch()..start();
@@ -135,18 +136,18 @@ void main() {
       // ATDD Performance Assertions
       expect(result1.successCount, equals(6), reason: 'Sequential should process all files');
       expect(result3.successCount, equals(6), reason: 'Parallel should process all files');
-      expect(maxConcurrent1, equals(1), reason: 'Sequential should use exactly 1 concurrent file');
-      expect(maxConcurrent3, lessThanOrEqualTo(3), reason: 'Parallel should respect limit of 3');
+      expect(maxConcurrent1, equals(1), reason: 'Sequential should use exactly 1 concurrent chunk');
+      expect(maxConcurrent3, lessThanOrEqualTo(3), reason: 'Parallel should respect chunk limit of 3');
       expect(maxConcurrent3, greaterThan(1), reason: 'Parallel should actually use parallelism');
       
       // Performance should improve with parallelism
       final speedup = stopwatch1.elapsedMilliseconds / stopwatch3.elapsedMilliseconds;
       
       print('   📈 Performance Results:');
-      print('   - Sequential (1): ${stopwatch1.elapsedMilliseconds}ms');
-      print('   - Parallel (3): ${stopwatch3.elapsedMilliseconds}ms');
+      print('   - Sequential (chunk limit 1): ${stopwatch1.elapsedMilliseconds}ms');
+      print('   - Parallel (chunk limit 3): ${stopwatch3.elapsedMilliseconds}ms');
       print('   - Speedup: ${speedup.toStringAsFixed(2)}x');
-      print('   ✅ ATDD PASSED: Parallel processing provides performance benefit');
+      print('   ✅ ATDD PASSED: Chunk-based parallel processing provides performance benefit');
       
       expect(stopwatch3.elapsedMilliseconds, lessThan(stopwatch1.elapsedMilliseconds),
           reason: 'Parallel processing should be faster than sequential');
@@ -154,27 +155,25 @@ void main() {
     
     test('should handle CLI parameter simulation correctly', () async {
       print('\n🎯 ATDD: CLI Parameter Simulation');
-      print('   Command: translator /docs --concurrent 4 --files-concurrent 2');
+      print('   Command: translator /docs --concurrent 3 --chunk-size 1000');
       
-      // Simulate CLI parameters from actual usage
-      const cliChunkConcurrency = 4;  // --concurrent 4
-      const cliFileConcurrency = 2;   // --files-concurrent 2
+      // Simulate CLI parameters from actual usage (only chunk concurrency matters now)
+      const cliChunkConcurrency = 3;  // --concurrent 3 (the key parameter)
       
-      int observedMaxConcurrentFiles = 0;
-      int currentFiles = 0;
+      int observedMaxConcurrentChunks = 0;
+      int currentChunks = 0;
       
       final cliSimulationProcessor = FileProcessorImpl(
         TestTranslator(
           delayMs: 40,
           onTranslateStart: (_) {
-            currentFiles++;
-            observedMaxConcurrentFiles = max(observedMaxConcurrentFiles, currentFiles);
+            currentChunks++;
+            observedMaxConcurrentChunks = max(observedMaxConcurrentChunks, currentChunks);
           },
-          onTranslateEnd: (_) => currentFiles--,
+          onTranslateEnd: (_) => currentChunks--,
         ),
         TestMarkdownProcessor(),
-        maxConcurrentChunks: cliChunkConcurrency,
-        maxConcurrentFiles: cliFileConcurrency,
+        maxConcurrentChunks: cliChunkConcurrency, // Only chunk concurrency matters
       );
       
       final cliTestFiles = <IFileWrapper>[
@@ -188,14 +187,14 @@ void main() {
       
       // ATDD CLI Assertions
       expect(result.successCount, equals(4), reason: 'CLI simulation should process all docs');
-      expect(observedMaxConcurrentFiles, lessThanOrEqualTo(cliFileConcurrency),
-          reason: 'CLI --files-concurrent parameter must be enforced');
+      expect(observedMaxConcurrentChunks, lessThanOrEqualTo(cliChunkConcurrency),
+          reason: 'CLI --concurrent parameter must be enforced through intelligent batching');
       
       print('   📊 CLI Simulation Results:');
       print('   - Files processed: ${result.successCount}/${cliTestFiles.length}');
-      print('   - Observed max concurrent files: $observedMaxConcurrentFiles (CLI limit: $cliFileConcurrency)');
-      print('   - Chunk concurrency configured: $cliChunkConcurrency');
-      print('   ✅ ATDD PASSED: CLI parameters correctly implemented');
+      print('   - Observed max concurrent chunks: $observedMaxConcurrentChunks (CLI chunk limit: $cliChunkConcurrency)');
+      print('   - Intelligent batching respects CLI chunk concurrency');
+      print('   ✅ ATDD PASSED: CLI chunk concurrency parameter correctly implemented');
     });
   });
 }
