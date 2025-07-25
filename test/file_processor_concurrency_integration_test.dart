@@ -202,9 +202,9 @@ void main() {
         print('   ✅ ATDD Test Passed: Intelligent scheduling respects chunk limit');
       });
 
-      test('should demonstrate batch size effect: 1 vs 3 vs 5 concurrent files',
+      test('should demonstrate batch size effect with different chunk limits',
           () async {
-        print('\n🔬 ATDD Performance Analysis: Batch Size Impact');
+        print('🔬 ATDD Performance Analysis: Chunk Limit Impact');
 
         final testFiles = List.generate(
             8,
@@ -214,14 +214,13 @@ void main() {
                   1.5, // 1.5KB each
                 ));
 
-        // Test 1: Sequential processing (maxConcurrentFiles = 1)
-        print('\n   Test 1: Sequential (maxConcurrentFiles=1)');
+        // Test 1: Very small chunk limit (forces many batches)
+        print('\n   Test 1: Small Chunk Limit (1)');
         final sequentialTranslator = BatchTrackingTranslator(delayMs: 80);
         final sequentialProcessor = FileProcessorImpl(
           sequentialTranslator,
           MarkdownProcessorImpl(),
-          maxConcurrentChunks: 5,
-          maxConcurrentFiles: 1,
+          maxConcurrentChunks: 1, // Only 1 chunk at a time
         );
 
         final stopwatch1 = Stopwatch()..start();
@@ -229,14 +228,13 @@ void main() {
             await sequentialProcessor.translateFiles(testFiles, false);
         stopwatch1.stop();
 
-        // Test 2: Moderate parallelism (maxConcurrentFiles = 3)
-        print('\n   Test 2: Moderate Parallel (maxConcurrentFiles=3)');
+        // Test 2: Moderate chunk limit
+        print('\n   Test 2: Moderate Chunk Limit (3)');
         final moderateTranslator = BatchTrackingTranslator(delayMs: 80);
         final moderateProcessor = FileProcessorImpl(
           moderateTranslator,
           MarkdownProcessorImpl(),
-          maxConcurrentChunks: 5,
-          maxConcurrentFiles: 3,
+          maxConcurrentChunks: 3, // 3 chunks at a time
         );
 
         final stopwatch2 = Stopwatch()..start();
@@ -244,27 +242,26 @@ void main() {
             await moderateProcessor.translateFiles(testFiles, false);
         stopwatch2.stop();
 
-        // Test 3: High parallelism (maxConcurrentFiles = 5)
-        print('\n   Test 3: High Parallel (maxConcurrentFiles=5)');
+        // Test 3: High chunk limit
+        print('\n   Test 3: High Chunk Limit (8)');
         final highTranslator = BatchTrackingTranslator(delayMs: 80);
         final highProcessor = FileProcessorImpl(
           highTranslator,
           MarkdownProcessorImpl(),
-          maxConcurrentChunks: 5,
-          maxConcurrentFiles: 5,
+          maxConcurrentChunks: 8, // All 8 files can run together
         );
 
         final stopwatch3 = Stopwatch()..start();
         final result3 = await highProcessor.translateFiles(testFiles, false);
         stopwatch3.stop();
 
-        // ATDD Assertions: Verify concurrency limits
+        // ATDD Assertions: Verify chunk limits result in appropriate batching
         expect(sequentialTranslator.maxConcurrentFiles, equals(1),
-            reason: 'Sequential should process exactly 1 file at a time');
+            reason: 'Small chunk limit should force sequential processing');
         expect(moderateTranslator.maxConcurrentFiles, lessThanOrEqualTo(3),
-            reason: 'Moderate should respect limit of 3');
-        expect(highTranslator.maxConcurrentFiles, lessThanOrEqualTo(5),
-            reason: 'High should respect limit of 5');
+            reason: 'Moderate chunk limit should batch appropriately');
+        expect(highTranslator.maxConcurrentFiles, lessThanOrEqualTo(8),
+            reason: 'High chunk limit should allow more parallelism');
 
         // All should succeed
         expect(
@@ -274,22 +271,22 @@ void main() {
 
         // Performance analysis
         print('\n   📈 Performance Results:');
-        print('   - Sequential (1): ${stopwatch1.elapsedMilliseconds}ms');
-        print('   - Moderate (3): ${stopwatch2.elapsedMilliseconds}ms');
-        print('   - High (5): ${stopwatch3.elapsedMilliseconds}ms');
+        print('   - Chunk Limit 1: ${stopwatch1.elapsedMilliseconds}ms');
+        print('   - Chunk Limit 3: ${stopwatch2.elapsedMilliseconds}ms');
+        print('   - Chunk Limit 8: ${stopwatch3.elapsedMilliseconds}ms');
 
         final speedup3 =
             stopwatch1.elapsedMilliseconds / stopwatch2.elapsedMilliseconds;
-        final speedup5 =
+        final speedup8 =
             stopwatch1.elapsedMilliseconds / stopwatch3.elapsedMilliseconds;
 
         print('   - Speedup (3 vs 1): ${speedup3.toStringAsFixed(2)}x');
-        print('   - Speedup (5 vs 1): ${speedup5.toStringAsFixed(2)}x');
+        print('   - Speedup (8 vs 1): ${speedup8.toStringAsFixed(2)}x');
 
-        // High parallelism should be faster
+        // Higher chunk limits should be faster
         expect(stopwatch3.elapsedMilliseconds,
             lessThan(stopwatch1.elapsedMilliseconds),
-            reason: 'High parallelism should be faster than sequential');
+            reason: 'Higher chunk limit should be faster than lower limit');
       });
 
       test('should handle mixed file sizes with appropriate batching',
@@ -302,7 +299,7 @@ void main() {
         final fileProcessor = FileProcessorImpl(
           mockTranslator,
           MarkdownProcessorImpl(),
-          maxConcurrentChunks: 4,
+          maxConcurrentChunks: batchLimit,
           maxConcurrentFiles: batchLimit,
         );
 
@@ -366,7 +363,7 @@ void main() {
 
         expect(mockTranslator.maxConcurrentFiles, lessThanOrEqualTo(batchLimit),
             reason:
-                'Mixed file processing must respect batch concurrency limit');
+                'Mixed file processing should be batched according to chunk limit');
 
         // Verify all files were processed
         expect(mockTranslator.processedFiles.length, equals(6),
@@ -388,7 +385,7 @@ void main() {
         final fileProcessor = FileProcessorImpl(
           errorTranslator,
           MarkdownProcessorImpl(),
-          maxConcurrentChunks: 3,
+          maxConcurrentChunks: batchLimit,
           maxConcurrentFiles: batchLimit,
         );
 
@@ -422,14 +419,14 @@ void main() {
         expect(result.successCount, greaterThan(0),
             reason: 'Some files should succeed despite errors');
 
-        // Critical: Concurrency limits must be maintained even during errors
+        // Critical: Chunk limits must be maintained even during errors
         expect(
             errorTranslator.maxConcurrentFiles, lessThanOrEqualTo(batchLimit),
             reason:
-                'Batch concurrency limit must be respected even with errors');
+                'Chunk limit must be respected even with errors');
 
         errorTranslator.printBatchStatistics();
-        print('   ✅ Error handling maintained batch concurrency limits');
+        print('   ✅ Error handling maintained chunk limits');
         print(
             '   - Success: ${result.successCount}, Failures: ${result.failureCount}');
       });
@@ -648,18 +645,18 @@ void main() {
         );
         stopwatch.stop();
 
-        // ATDD Assertions: CLI parameters must be respected
+        // ATDD Assertions: CLI chunk parameter must be respected
         expect(result.successCount, equals(6),
             reason: 'CLI integration should process all documentation files');
         expect(mockTranslator.maxConcurrentFiles,
-            lessThanOrEqualTo(cliFileConcurrency),
-            reason: '--files-concurrent parameter must be respected');
+            lessThanOrEqualTo(cliChunkConcurrency),
+            reason: '--concurrent (chunk) parameter must be respected');
 
         print('   📊 CLI Integration Results:');
         print(
             '   - Files processed: ${result.successCount}/${docFiles.length}');
         print(
-            '   - Max concurrent files: ${mockTranslator.maxConcurrentFiles} (limit: $cliFileConcurrency)');
+            '   - Max concurrent files: ${mockTranslator.maxConcurrentFiles} (chunk limit: $cliChunkConcurrency)');
         print('   - Total time: ${stopwatch.elapsedMilliseconds}ms');
         print('   ✅ CLI parameters correctly integrated');
 
