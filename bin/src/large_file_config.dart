@@ -8,12 +8,15 @@ class LargeFileConfig {
   /// Default maximum number of concurrent chunk translations
   static const int defaultMaxConcurrentChunks = 10;
   
+  /// Default maximum number of concurrent file translations
+  static const int defaultMaxConcurrentFiles = 3;
+  
   /// Default maximum chunk size in bytes (20KB)
   static const int _originalDefaultChunkMaxBytes = 20480;
   static int _currentDefaultChunkMaxBytes = _originalDefaultChunkMaxBytes;
   static int get defaultChunkMaxBytes => _currentDefaultChunkMaxBytes;
   
-  /// Default batch size for parallel file processing
+  /// Default batch size for parallel file processing (kept for backward compatibility)
   static const int defaultBatchSize = 5;
   
   /// Default delay between batches in milliseconds
