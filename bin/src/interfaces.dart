@@ -70,6 +70,10 @@ abstract class LinkProcessor {
   Future<void> replaceLinksInAllFiles(Directory directory, String extension);
 }
 
+/// Interface for processing Markdown content
+/// 
+/// `List<SplittedChunk> splitMarkdownContent(String content, {required int maxBytes});`
+/// `String removeMarkdownSyntax(String content);`
 abstract class MarkdownProcessor {
   List<SplittedChunk> splitMarkdownContent(String content, {required int maxBytes});
 
