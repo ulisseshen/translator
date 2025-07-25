@@ -10,7 +10,8 @@ environment:
 dependencies:
   google_generative_ai: ^0.4.7
   markdown: ^7.2.2
-  # path: ^1.8.0
+  get_it: ^8.0.2
+  path: ^1.8.0
 
 dev_dependencies:
   lints: ^5.0.0
