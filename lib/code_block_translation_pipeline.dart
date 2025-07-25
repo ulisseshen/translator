@@ -129,6 +129,7 @@ class CodeBlockTranslationPipeline {
     int maxConcurrency = 10,
     void Function(int completed, int total)? progressCallback,
   }) async {
+    assert(maxConcurrency > 0, 'maxConcurrency must be greater than 0');
     final startTime = DateTime.now();
 
     // Step 1: Extract code blocks and replace with anchors
