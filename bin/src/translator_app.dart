@@ -3,6 +3,7 @@ import 'package:translator/translator.dart';
 import 'app.dart';
 import 'dependency_injection.dart';
 import 'header_tools_service.dart';
+import 'models.dart';
 
 /// Main application facade that coordinates all operations
 class TranslatorApp {
