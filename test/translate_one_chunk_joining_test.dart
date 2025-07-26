@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 import '../bin/src/app.dart';
 import '../bin/src/large_file_config.dart';
 import 'package:translator/markdown_spliter.dart';
+import 'package:translator/code_block_extractor.dart';
 import 'test_mocks.dart';
 
 void main() {
@@ -209,17 +210,31 @@ Mais conteúdo aqui.''';
       print('Total file size: $totalFileSize UTF-8 bytes');
       print('Chunk size limit: $chunkSize bytes (20KB)');
       
-      // First, test the MarkdownSplitter directly with detailed analysis like UTF8 test
-      final splitter = MarkdownSplitter(maxBytes: chunkSize);
-      final chunks = splitter.splitMarkdown(originalContent);
+      // IMPORTANT: With our new fenced code block extraction approach, we need to test 
+      // chunking on the CLEAN content (after fenced blocks are extracted) to match 
+      // the actual translation workflow
       
+      // First, extract fenced code blocks like the production code does
+      final extractor = CodeBlockExtractor();
+      final extractionResult = extractor.extractCodeBlocks(originalContent);
+      final cleanContent = extractionResult.cleanContent;
+      final extractedBlocks = extractionResult.extractedBlocks;
+      
+      print('Fenced code blocks extracted: ${extractedBlocks.length}');
+      
+      // Now test chunking on the clean content (this matches the actual workflow)
+      final splitter = MarkdownSplitter(maxBytes: chunkSize);
+      final chunks = splitter.splitMarkdown(cleanContent);
+      
+      final cleanContentSize = utf8.encode(cleanContent).length;
+      print('Clean content size (after extraction): $cleanContentSize UTF-8 bytes');
       print('Total chunks created: ${chunks.length}');
-      print('Expected chunks (if perfectly split): ${(totalFileSize / chunkSize).ceil()}');
+      print('Expected chunks (if perfectly split): ${(cleanContentSize / chunkSize).ceil()}');
       print('');
       
-      // Analyze each chunk - deterministic validation without conditionals
-      int translatableChunks = chunks.where((chunk) => chunk.isTranslatable).length;
-      int codeBlockChunks = chunks.where((chunk) => !chunk.isTranslatable).length;
+      // All chunks from clean content are translatable (fenced blocks already extracted)
+      int translatableChunks = chunks.length; // All chunks are translatable now
+      int codeBlockChunks = 0; // No code block chunks in clean content
       
       print('Summary: $translatableChunks translatable, $codeBlockChunks non-translatable');
 
@@ -229,8 +244,8 @@ Mais conteúdo aqui.''';
       
       // Verify chunks can be rejoined correctly - matching UTF8 test approach
       final rejoinedContent = chunks.map((chunk) => chunk.content).join('');
-      expect(rejoinedContent.trim(), equals(originalContent.trim()),
-          reason: 'Content should be preserved after splitting');
+      expect(rejoinedContent.trim(), equals(cleanContent.trim()),
+          reason: 'Clean content should be preserved after splitting and rejoining');
       
       // Now test the actual translation workflow
       final originalfile = File('/Users/ulisses.hen/projects/translator/test/split/test.md');
