@@ -182,7 +182,7 @@ Padding(                         // <-- This is a Widget
         expect(result.trim(), isNotEmpty);
 
         // Verify no anchor patterns leaked through
-        expect(result, isNot(contains('__CODE_BLOCK_ANCHOR_')));
+        expect(result, isNot(contains('__EDOC_')));
         expect(result, isNot(contains('__INLINE_CODE_ANCHOR_')));
 
         // If original had code blocks, result should too
@@ -257,7 +257,7 @@ Padding(                         // <-- This is a Widget
       expect(resultCodeBlocks, equals(originalCodeBlocks));
 
       // Verify no processing artifacts
-      expect(result, isNot(contains('__CODE_BLOCK_ANCHOR_')));
+      expect(result, isNot(contains('__EDOC_')));
       expect(result, isNot(contains('__INLINE_CODE_ANCHOR_')));
 
       print(
@@ -291,7 +291,7 @@ Padding(                         // <-- This is a Widget
 
           // Assert - Basic validation
           expect(result, isNotNull);
-          expect(result, isNot(contains('__CODE_BLOCK_ANCHOR_')));
+          expect(result, isNot(contains('__EDOC_')));
           expect(result, isNot(contains('__INLINE_CODE_ANCHOR_')));
 
           // Count elements for summary

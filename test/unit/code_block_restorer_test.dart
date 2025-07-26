@@ -34,7 +34,7 @@ Text after code.
 
 Texto antes do código.
 
-__CODE_BLOCK_ANCHOR_0__
+__EDOC_0__
 
 Texto após o código.
 ''';
@@ -54,7 +54,7 @@ Texto após o código.
         expect(restoredContent, contains('```'));
         expect(restoredContent, contains('Texto antes do código'));
         expect(restoredContent, contains('Texto após o código'));
-        expect(restoredContent, isNot(contains('__CODE_BLOCK_ANCHOR_0__')));
+        expect(restoredContent, isNot(contains('__EDOC_0__')));
       });
 
       test('should restore multiple fenced code blocks in correct order', () {
@@ -81,12 +81,12 @@ Final text.
 # Múltiplos Blocos
 
 Primeiro bloco:
-__CODE_BLOCK_ANCHOR_0__
+__EDOC_0__
 
 Texto entre.
 
 Segundo bloco:
-__CODE_BLOCK_ANCHOR_1__
+__EDOC_1__
 
 Texto final.
 ''';
@@ -106,8 +106,8 @@ Texto final.
         expect(restoredContent, contains('print(\'Second\')'));
         expect(restoredContent, contains('Primeiro bloco'));
         expect(restoredContent, contains('Segundo bloco'));
-        expect(restoredContent, isNot(contains('__CODE_BLOCK_ANCHOR_0__')));
-        expect(restoredContent, isNot(contains('__CODE_BLOCK_ANCHOR_1__')));
+        expect(restoredContent, isNot(contains('__EDOC_0__')));
+        expect(restoredContent, isNot(contains('__EDOC_1__')));
       });
 
       test('should preserve code block formatting and indentation', () {
@@ -131,7 +131,7 @@ Example:
         const translatedCleanContent = '''
 Exemplo:
 
-__CODE_BLOCK_ANCHOR_0__
+__EDOC_0__
 ''';
 
         final extractionResult = extractor.extractCodeBlocks(originalContent);
@@ -177,7 +177,7 @@ Then call `start()` method.
 
 Use `init()` primeiro:
 
-__CODE_BLOCK_ANCHOR_0__
+__EDOC_0__
 
 Então chame o método `start()`.
 ''';
@@ -196,7 +196,7 @@ Então chame o método `start()`.
         expect(restoredContent, contains('void init() {'));
         expect(restoredContent, contains('print(\'Starting...\');'));
         expect(restoredContent, contains('Então chame o método `start()`.'));
-        expect(restoredContent, isNot(contains('__CODE_BLOCK_ANCHOR_')));
+        expect(restoredContent, isNot(contains('__EDOC_')));
       });
     });
 
@@ -234,7 +234,7 @@ Text after.
         const translatedContent = '''
 Texto antes.
 
-__CODE_BLOCK_ANCHOR_0__
+__EDOC_0__
 
 Texto depois.
 ''';
@@ -304,7 +304,7 @@ The `response.status` indicates success.
 
 Use o cabeçalho `Authorization`:
 
-__CODE_BLOCK_ANCHOR_0__
+__EDOC_0__
 
 ## Gerenciamento de Usuários
 
@@ -312,7 +312,7 @@ __CODE_BLOCK_ANCHOR_0__
 
 Chame `POST /users` com:
 
-__CODE_BLOCK_ANCHOR_1__
+__EDOC_1__
 
 A resposta inclui o campo `user.id`.
 
@@ -328,7 +328,7 @@ const response = await fetch('/users/123', {
 ```
 
 O `response.status` indica sucesso.
-__CODE_BLOCK_ANCHOR_2__
+__EDOC_2__
 
 O `response.status` indica sucesso.
 ''';
@@ -365,7 +365,7 @@ O `response.status` indica sucesso.
         expect(restoredContent, contains('const response = await fetch'));
 
         // Verify no anchors remain
-        expect(restoredContent, isNot(contains('__CODE_BLOCK_ANCHOR_')));
+        expect(restoredContent, isNot(contains('__EDOC_')));
       });
     });
   });

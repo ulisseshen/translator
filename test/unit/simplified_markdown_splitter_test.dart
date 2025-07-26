@@ -279,7 +279,7 @@ Content for section 2.
 
 Some text before code.
 
-__CODE_BLOCK_ANCHOR_0__
+__EDOC_0__
 
 Some text after code.
 
@@ -292,7 +292,7 @@ Another paragraph with __INLINE_CODE_ANCHOR_1__ inline anchor.
         
         // Verify anchors are preserved
         final allContent = chunks.map((c) => c.content).join();
-        expect(allContent, contains('__CODE_BLOCK_ANCHOR_0__'));
+        expect(allContent, contains('__EDOC_0__'));
         expect(allContent, contains('__INLINE_CODE_ANCHOR_1__'));
       });
     });

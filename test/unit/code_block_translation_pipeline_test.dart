@@ -346,7 +346,7 @@ More text with `another()` call.
           translator: (content) async {
             // Remove all anchors, simulating a translation that loses them
             return content
-                .replaceAll(RegExp(r'__CODE_BLOCK_ANCHOR_\d+__'), 'MISSING_CODE')
+                .replaceAll(RegExp(r'__EDOC_\d+__'), 'MISSING_CODE')
                 .replaceAll('Test Document', 'Documento de Teste');
           },
         );

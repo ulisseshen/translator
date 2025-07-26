@@ -48,7 +48,7 @@ void main() {
     group('Properties', () {
       test('should always be translatable', () {
         final chunk1 = SimplifiedChunk.fromContent('Regular text');
-        final chunk2 = SimplifiedChunk.fromContent('Text with anchors __CODE_BLOCK_ANCHOR_0__');
+        final chunk2 = SimplifiedChunk.fromContent('Text with anchors __EDOC_0__');
         final chunk3 = SimplifiedChunk.fromContent('Mixed content __INLINE_CODE_ANCHOR_1__ here');
 
         expect(chunk1.isTranslatable, isTrue);

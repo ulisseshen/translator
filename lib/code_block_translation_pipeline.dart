@@ -277,7 +277,7 @@ class CodeBlockTranslationPipeline {
     }
 
     // Check that no anchor patterns remain in the final content
-    final hasRemainingAnchors = finalContent.contains('__CODE_BLOCK_ANCHOR_');
+    final hasRemainingAnchors = finalContent.contains('__EDOC_');
 
     if (hasRemainingAnchors) {
       return false;

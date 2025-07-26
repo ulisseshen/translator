@@ -32,7 +32,7 @@ Some text after code.
 
 Some text before code.
 
-__CODE_BLOCK_ANCHOR_0__
+__EDOC_0__
 
 Some text after code.
 ''';
@@ -47,7 +47,7 @@ Some text after code.
         expect(result.extractedBlocks[0].originalCode,
             contains('print(\'Hello World\')'));
         expect(result.extractedBlocks[0].anchor,
-            equals('__CODE_BLOCK_ANCHOR_0__'));
+            equals('__EDOC_0__'));
       });
 
       test('should extract multiple fenced code blocks with sequential anchors',
@@ -84,11 +84,11 @@ echo "Third"
 
         // Verify anchors are sequential
         expect(result.extractedBlocks[0].anchor,
-            equals('__CODE_BLOCK_ANCHOR_0__'));
+            equals('__EDOC_0__'));
         expect(result.extractedBlocks[1].anchor,
-            equals('__CODE_BLOCK_ANCHOR_1__'));
+            equals('__EDOC_1__'));
         expect(result.extractedBlocks[2].anchor,
-            equals('__CODE_BLOCK_ANCHOR_2__'));
+            equals('__EDOC_2__'));
 
         // Verify content
         expect(result.extractedBlocks[0].originalCode,
@@ -99,9 +99,9 @@ echo "Third"
             result.extractedBlocks[2].originalCode, contains('echo "Third"'));
 
         // Verify clean content has anchors
-        expect(result.cleanContent, contains('__CODE_BLOCK_ANCHOR_0__'));
-        expect(result.cleanContent, contains('__CODE_BLOCK_ANCHOR_1__'));
-        expect(result.cleanContent, contains('__CODE_BLOCK_ANCHOR_2__'));
+        expect(result.cleanContent, contains('__EDOC_0__'));
+        expect(result.cleanContent, contains('__EDOC_1__'));
+        expect(result.cleanContent, contains('__EDOC_2__'));
       });
 
       test('should handle fenced code blocks with language specifiers', () {
@@ -194,7 +194,7 @@ Then call `start()` method.
 
         // Verify anchors in correct order (fenced blocks are extracted first)
         expect(result.cleanContent,
-            contains('__CODE_BLOCK_ANCHOR_0__')); // fenced block
+            contains('__EDOC_0__')); // fenced block
       });
 
       test('should maintain anchor order regardless of code block type', () {
@@ -223,9 +223,9 @@ Final `inline` code.
 
         // Verify anchor sequence (fenced blocks extracted first, then inline)
         expect(result.extractedBlocks[0].anchor,
-            equals('__CODE_BLOCK_ANCHOR_0__'));
+            equals('__EDOC_0__'));
         expect(result.extractedBlocks[1].anchor,
-            equals('__CODE_BLOCK_ANCHOR_1__'));
+            equals('__EDOC_1__'));
       });
     });
 
@@ -316,7 +316,7 @@ print('end')
         expect(
             result.cleanContent.trim(),
             equals(
-                '__CODE_BLOCK_ANCHOR_0__\n\nMiddle text with `inline` code.\n\n__CODE_BLOCK_ANCHOR_1__'));
+                '__EDOC_0__\n\nMiddle text with `inline` code.\n\n__EDOC_1__'));
       });
 
       test('should preserve whitespace around code blocks', () {
@@ -336,7 +336,7 @@ Text after.
 
         // Assert
         expect(
-            result.cleanContent, contains('\n\n__CODE_BLOCK_ANCHOR_0__\n\n'));
+            result.cleanContent, contains('\n\n__EDOC_0__\n\n'));
       });
     });
 

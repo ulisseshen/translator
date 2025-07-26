@@ -12,7 +12,7 @@ class MaliciousAnchorBreakingTranslator extends Translator {
     String result = text.trim();
     
     // Break fenced code block anchors by modifying them
-    result = result.replaceAll('__CODE_BLOCK_ANCHOR_', '__BROKEN_CODE_ANCHOR_');
+    result = result.replaceAll('__EDOC_', '__BROKEN_CODE_ANCHOR_');
     
     // Break inline code anchors by modifying them  
     result = result.replaceAll('__INLINE_CODE_ANCHOR_', '__BROKEN_INLINE_ANCHOR_');
@@ -29,7 +29,7 @@ class AnchorRemovingTranslator extends Translator {
     String result = text.trim();
     
     // Remove all anchor patterns entirely
-    result = result.replaceAll(RegExp(r'__CODE_BLOCK_ANCHOR_\d+__'), '');
+    result = result.replaceAll(RegExp(r'__EDOC_\d+__'), '');
     result = result.replaceAll(RegExp(r'__INLINE_CODE_ANCHOR_\d+__'), '');
     
     return result;
@@ -44,7 +44,7 @@ class WrongContentTranslator extends Translator {
     String result = text.trim();
     
     // Replace anchors with wrong content
-    result = result.replaceAll(RegExp(r'__CODE_BLOCK_ANCHOR_\d+__'), 'WRONG_CODE');
+    result = result.replaceAll(RegExp(r'__EDOC_\d+__'), 'WRONG_CODE');
     result = result.replaceAll(RegExp(r'__INLINE_CODE_ANCHOR_\d+__'), 'WRONG_INLINE');
     
     return result;
@@ -200,7 +200,7 @@ Inline `code` example.
       // Normal result should have proper code blocks
       expect(normalResult, contains('public class Test'));
       expect(normalResult, contains('`code`'));
-      expect(normalResult, isNot(contains('__CODE_BLOCK_ANCHOR_')));
+      expect(normalResult, isNot(contains('__EDOC_')));
       expect(normalResult, isNot(contains('__INLINE_CODE_ANCHOR_')));
 
       // Act & Assert - Malicious translator should fail with exception
@@ -359,7 +359,7 @@ With `inline` code.
       // Assert - Should preserve all code blocks
       expect(result, contains('void main() {'));
       expect(result, contains('`inline`'));
-      expect(result, isNot(contains('__CODE_BLOCK_ANCHOR_')));
+      expect(result, isNot(contains('__EDOC_')));
       expect(result, isNot(contains('__INLINE_CODE_ANCHOR_')));
       
       print('✅ Confirmed that normal translator works fine with default validation');

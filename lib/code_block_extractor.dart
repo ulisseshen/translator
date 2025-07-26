@@ -60,7 +60,7 @@ class CodeBlockExtractionResult {
 
 /// Extracts code blocks from markdown content and replaces them with anchors
 class CodeBlockExtractor {
-  static const String _fencedAnchorPrefix = '__CODE_BLOCK_ANCHOR_';
+  static const String _fencedAnchorPrefix = '__EDOC_';
   static const String _anchorSuffix = '__';
 
   /// Regular expression for fenced code blocks (```...```)
