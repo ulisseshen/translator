@@ -4,6 +4,8 @@ import 'dart:collection';
 import 'package:translator/markdown_spliter.dart';
 import 'package:translator/translator.dart';
 import 'package:translator/parallel_chunk_processor.dart';
+import 'package:translator/code_block_extractor.dart';
+import 'package:translator/code_block_restorer.dart';
 
 import 'app.dart';
 import 'large_file_config.dart';
@@ -198,14 +200,25 @@ class FileProcessorImpl implements FileProcessor {
     final stopwatchFile = Stopwatch()..start();
     try {
       final content = await file.readAsString();
+      
+      // PHASE 1: Extract fenced code blocks before any processing
+      final codeBlockExtractor = CodeBlockExtractor();
+      final extractionResult = codeBlockExtractor.extractCodeBlocks(content);
+      final cleanContent = extractionResult.cleanContent;
+      final extractedCodeBlocks = extractionResult.extractedBlocks;
+      
+      if (extractedCodeBlocks.isNotEmpty) {
+        print('🔒 Extracted ${extractedCodeBlocks.length} fenced code blocks for preservation');
+      }
+      
       String translatedContent;
 
       if (processLargeFiles && fileSizeKB > LargeFileConfig.maxKbSize) {
         print(LargeFileConfig.getLargeFileDetectedMessage(Utils.getFileName(file)));
         
-        // Split the file once
+        // PHASE 2: Split the cleaned content (without fenced blocks)
         final splitter = MarkdownSplitter(maxBytes: LargeFileConfig.defaultChunkMaxBytes);
-        final chunks = splitter.splitMarkdown(content);
+        final chunks = splitter.splitMarkdown(cleanContent);
         
         if (chunks.length > 1) {
           print('✂️ Arquivo dividido em ${chunks.length} partes:');
@@ -231,12 +244,13 @@ class FileProcessorImpl implements FileProcessor {
           // Save original content if --save-sent flag is used (for small files)
           if (saveSent) {
             final sentFileName = file.path.replaceFirst('.md', '_sent1.md');
-            await File(sentFileName).writeAsString(content);
-            print('📤 Original content saved as: $sentFileName');
+            await File(sentFileName).writeAsString(cleanContent);
+            print('📤 Original clean content saved as: $sentFileName');
           }
           
+          // PHASE 2: Translate the cleaned content (without fenced blocks)
           translatedContent = await translator.translate(
-            content,
+            cleanContent,
             onFirstModelError: () {
               print(
                   '🚨 Erro ao traduzir arquivo:  ${Utils.getFileName(file)}');
@@ -257,6 +271,16 @@ class FileProcessorImpl implements FileProcessor {
         }
       }
       
+      // PHASE 3: Restore fenced code blocks to translated content
+      if (extractedCodeBlocks.isNotEmpty) {
+        final codeBlockRestorer = CodeBlockRestorer();
+        translatedContent = codeBlockRestorer.restoreCodeBlocks(
+          translatedContent, 
+          extractedCodeBlocks
+        );
+        print('🔓 Restored ${extractedCodeBlocks.length} fenced code blocks to final content');
+      }
+      
       // Validate markdown structure and reference links consistency before saving
       final validationResult = MarkdownStructureValidator.validateStructureAndLinksDetailed(
         content, 
@@ -271,6 +295,7 @@ class FileProcessorImpl implements FileProcessor {
         final linksValid = validationResult.linkValidation.isValid;
         
         if (!structureValid && !linksValid) {
+          //TODO remover validação de strutura
           print('🚫❗ [STRUCTURE & LINKS MISMATCH] File skipped: $fileName ❗🚫');
         } else if (!structureValid) {
           print('🚫❗ [STRUCTURE MISMATCH] File skipped: $fileName ❗🚫');
